@@ -6,42 +6,41 @@
 
 typedef unsigned char octet;
 
+enum format {
+    PGM,
+    PPM
+};
+
 class Image {
-    private:
-        octet** red;
-        octet** green;
-        octet** blue;
-        int width;
-        int height;
-        int size;
+    protected:
+
+        size_t width = 0;
+        size_t height = 0;
+        size_t size = 0;
+
+        Image(size_t width,  size_t height);
+        Image();
+
+        bool inImg(size_t i, size_t j);
+        bool inImgLine(size_t i);
+        bool inImgColumn(size_t);
+
+        octet** allocateImgPixel(size_t width, size_t height);
+        void freeImgPixel(octet** array, size_t height);
+
+        format readHeader(FILE* imgFileName);
+        void skipComment(FILE* imgFileName);
+
+        virtual void readImage(const char* imgFileName){};
 
     public:
-        // Constructeur d'image
-        Image(int width, int height);
-        Image(const char* imgFileName);
-        Image(octet** redChannel, octet** greenChannel, octet** blueChannel, int width, int height);
+        virtual ~Image();
 
-        // Accesseurs aux données d'image
-        const octet** getRed() const;
-        const octet** getGreen() const;
-        const octet** getBlue() const;
-        int getWidth() const;
-        int getHeight() const;
-
-        // Setters sur les données d'image
-        void setRed(octet** newRed);
-        void setGreen(octet** newRed);
-        void setBlue(octet** newRed);
-
-        // Ecriture et lecture de fichiers d'image
-        void readImage(const char* imgFileName);
-        void writeImage(const char* imgFileName);
-
-
-        // Opérations sur les matrices de données
-        octet** allocateImgPixel(int width, int height);
-        void freeImgPixel(octet** array, int height);
-
+        size_t getWidth() const;
+        size_t getHeight() const;
+        size_t getSize() const;
+        
+        virtual void writeImage(const char* imgFileName){};
 };
 
 #endif // IMAGE_H

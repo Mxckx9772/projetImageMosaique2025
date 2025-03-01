@@ -1,23 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
-#include "Image.h"
-#include "Vernam.h"
+#include "src/ImageGrey.h"
 
 
 int main(int argc, char* argv[]){
   char imgName[250];
-  int width, height, size;
   
-  if (argc != 2){
-    printf("Usage:\n(1) Image.ppm\n"); 
+  /*if (argc != 2){
+    printf("Usage:\n(1) Image.pgm\n"); 
     exit(1);
-  }
+  }*/
    
-  sscanf (argv[1],"%s", imgName);
+  //sscanf (argv[1],"%s", imgName);
 
-  Image Img = Image(imgName);
+  Image Img = ImageGrey(10,10);
 
   return 0;
 }
