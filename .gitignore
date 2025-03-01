@@ -1,0 +1,8 @@
+# Ignorer les dossiers obj, bin et img
+obj/
+bin/
+img/
+
+# Ignorer les fichiers .pgm et .ppm
+*.pgm
+*.ppm
