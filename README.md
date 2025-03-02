@@ -13,6 +13,7 @@ Application utilisant la synthèse d'image mosaïque pour la sécurité et la pr
 2.  Pour compiler le projet :
 
     ```bash
+    cd projetImageMosaique2025
     make
     ```
 
