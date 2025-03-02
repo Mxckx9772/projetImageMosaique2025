@@ -40,7 +40,9 @@ class Image {
         size_t getHeight() const;
         size_t getSize() const;
         
-        virtual void writeImage(const char* imgFileName){};
+        virtual void writeImage(const char* imgFileName){
+            printf("dddd");
+        };
 };
 
 #endif // IMAGE_H

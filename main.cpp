@@ -7,14 +7,17 @@
 int main(int argc, char* argv[]){
   char imgName[250];
   
-  /*if (argc != 2){
+  if (argc != 2){
     printf("Usage:\n(1) Image.pgm\n"); 
     exit(1);
-  }*/
+  }
    
-  //sscanf (argv[1],"%s", imgName);
+  sscanf (argv[1],"%s", imgName);
 
-  Image Img = ImageGrey(10,10);
+  ImageGrey Img = ImageGrey(imgName);
+
+  printf("Ecriture de l'image...\n");
+  Img.writeImage("Name.pgm");
 
   return 0;
 }

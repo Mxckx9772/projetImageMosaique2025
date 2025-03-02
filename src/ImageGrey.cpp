@@ -77,11 +77,93 @@ void ImageGrey::setColumn(octet value, size_t j) {
 }
 
 // Lecture et ecriture de fichiers
-void ImageGrey::readImage(const char* imgFile) {
+void ImageGrey::readImage(const char* imgFileName){
+    FILE* imgFile;
 
-};
+    imgFile = fopen(imgFileName, "rb");
 
-// Ecriture de l'image
-void ImageGrey::writeImage(const char* imgFile){
+    if(imgFile){
+        if(readHeader(imgFile) == PGM){
+            
+        }else{
+            fprintf(stderr, "Erreur - ImageColor requis pour : %s", imgFileName);
+        }
+    }else{
+        fprintf(stderr, "Erreur - Impossible d'accéder au fichier : %s\n", imgFileName);
+    }
 
-};
+
+    // Allocation des nuances de gris
+    grey = allocateImgPixel(width, height);
+
+    if (!grey) {
+        fprintf(stderr, "Erreur - Echec de l'allocation des tableau de composantes couleurs");
+
+
+        // Vidage du tableau
+        freeImgPixel(grey, height);
+
+        fclose(imgFile); // Fermeture du fichier
+
+        return;
+    }
+
+
+    // Lecture des valeurs RGB
+    for (int i = 0; i < height; i++) {
+        //for (int j = 0; j < width; j++) {
+
+            // Lecture des valeurs rouges
+            if (fread(grey[i], sizeof(octet), width, imgFile) != width) {
+
+                fprintf(stderr, "Erreur - Lecture impossible de la valeur gris d'indices (%d)\n", i);
+                return;
+
+            }
+        //}
+
+    }
+
+    fclose(imgFile);
+
+}
+
+void ImageGrey::writeImage(const char* imgName) {
+    FILE *imgFile;
+
+    imgFile = fopen(imgName, "wb");
+
+    if(!imgFile){
+        fprintf(stderr, "Impossible d'acceder au fichier %s\n", imgName);
+        return;
+
+    }else{
+
+        // En-tête
+        fprintf(imgFile, "P5\r");
+        fprintf(imgFile, "%ld %ld\r255\r", width, height);
+
+
+        // Ecriture des valeurs de gris
+        for (size_t i = 0; i < height; i++) {
+            //for (size_t j = 0; j < width; j++) {
+
+                if (fwrite(grey[i], sizeof(octet), width, imgFile) != width) {
+                    fprintf(stderr, "Erreur - Ecriture impossible de la valeur rouge d'indices (%ld)\n", width);
+                    fclose(imgFile);
+                    return;
+                }
+
+                fprintf(stdin, "Erreur - Ecriture impossible de la valeur rouge d'indices (%ld)\n", width);
+
+            //}
+
+
+        }
+
+        fclose(imgFile);
+
+    }
+
+
+}
