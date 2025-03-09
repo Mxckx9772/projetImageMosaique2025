@@ -4,5 +4,10 @@ bin/
 img/
 
 # Ignorer les fichiers .pgm et .ppm
-*.pgm
-*.ppm
+/Images
+/TP_Mosaique/Images
+/TP_Mosaique/images_pgm
+TP_Mosaique/imageTP/.DS_Store
+.DS_Store
+TP_Mosaique/mosaique
+TP_Mosaique/mosaique.o
