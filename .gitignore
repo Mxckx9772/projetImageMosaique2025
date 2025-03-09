@@ -2,6 +2,7 @@
 obj/
 bin/
 img/
+.vscode/
 
 # Ignorer les fichiers .pgm et .ppm
 /Images
