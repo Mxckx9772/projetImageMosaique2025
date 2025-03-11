@@ -2,16 +2,15 @@
 obj/
 bin/
 img/
+*.o
+
+# Cache
 .vscode/
 .idea/
-*.pgm
-*.ppm
-
-# Ignorer les fichiers .pgm et .ppm
-/Images
-/TP_Mosaique/Images
-/TP_Mosaique/images_pgm
-TP_Mosaique/imageTP/.DS_Store
 .DS_Store
-TP_Mosaique/mosaique
-TP_Mosaique/mosaique.o
+
+# TP Mosaïque
+in/
+out/
+base_images.txt
+mosaique
