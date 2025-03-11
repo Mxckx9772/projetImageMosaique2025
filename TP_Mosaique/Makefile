@@ -5,7 +5,6 @@ LDFLAGS = $(shell pkg-config --cflags --libs opencv4)  # Utilise pkg-config pour
 SRC = mosaique.cpp
 OBJ = mosaique.o
 OUT = mosaique
-DIMENSION_IMAGETTE = 128
 
 # Cibles par défaut
 all: $(OUT)

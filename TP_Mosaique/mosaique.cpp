@@ -23,15 +23,17 @@
 #include <string>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <sstream>
 #include <opencv2/opencv.hpp>
 
 namespace fs = std::filesystem;
+using namespace std;
+
 int DIMENSION_IMAGETTE = 128;
 int DIMENSION_CRITERE = 8;
-const std::string DossierSortie = "imageTP";  // Dossier de sortie global
-const std::string ImageLue = "imageTP/Lena.pgm";
-const std::string ImageEcrite = "Lena";
+const string ImageLue = "in/Lena.pgm";
+const string ImageEcrite = "Lena";
 
 // Fonction pour convertir et redimensionner toutes les images de la banque :
 void convertir_pgm(std::string source_folder, std::string destination_folder, int size=DIMENSION_IMAGETTE){
@@ -50,16 +52,16 @@ void convertir_pgm(std::string source_folder, std::string destination_folder, in
 				cv::Mat img = cv::imread(img_path, cv::IMREAD_GRAYSCALE); // Convertir en niveaux de gris
 				if (!img.empty()) {
 					cv::resize(img, img, cv::Size(size, size));
-					std::string rel_path = fs::relative(entry.path(), source_folder).string();
+					std::string rel_path = relative(entry.path(), source_folder).string();
 					std::string save_path = destination_folder + "/" + rel_path.substr(0, rel_path.find_last_of('.')) + ".pgm";
-					fs::create_directories(fs::path(save_path).parent_path());
+					create_directories(fs::path(save_path).parent_path());
 					cv::imwrite(save_path, img);
 				}
 			}
+			cpt++;
 		}
-	cpt++;
-}
-std::cout << "Conversion terminée ! " <<cpt<<" Images créées !"<< std::endl;
+	}
+	std::cout << "Conversion terminée ! " <<cpt<<" Images créées !"<< std::endl;
 }
 
 // Fonction permettant d'enregistrer les critères de chaque image dans un fichier :
@@ -100,7 +102,7 @@ std::map<std::string, double> charger_base_images_depuis_fichier(const std::stri
 void decoupe(OCTET*Imgin,OCTET*ImgOut,int nH,int nW,int size){
 	int nTaille = nH * nW;
 	if(nH%size!=0 || nW%size!=0){
-		std::cout << "Erreur : les dimensions de l'image ne sont pas un multiple des dimensions de la mosaique" << std::endl;
+		std::cout << "Erreur : les dimensions de l'image ne sont paun multiple des dimensions de la mosaique" << std::endl;
 		return;
 	}
 	for (int i=0; i < nH; i+=size){
@@ -136,7 +138,7 @@ std::map<std::string, double> charger_base_images(const std::string& dossier) {
     std::map<std::string, double> base_images;
 	OCTET* ImgTmp;
 	allocation_tableau(ImgTmp, OCTET,DIMENSION_IMAGETTE*DIMENSION_IMAGETTE);
-    for (const auto& entry : fs::recursive_directory_iterator(dossier)) {
+    for (const std::filesystem::directory_entry& entry : fs::recursive_directory_iterator(dossier)) {
         if (entry.path().extension() == ".pgm") {
 			lire_image_pgm(const_cast<char*>(entry.path().string().c_str()), ImgTmp, DIMENSION_IMAGETTE*DIMENSION_IMAGETTE);
 			base_images[entry.path().string()] = critere_img_mean(ImgTmp,DIMENSION_IMAGETTE,DIMENSION_IMAGETTE);
@@ -176,7 +178,7 @@ void generationImage(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size,std::
 				for (int x = 0; x < size; x++) {
 					// S'assurer que l'on ne dépasse pas les dimensions de l'image de sortie
 					if (i + y < nH && j + x < nW) {
-						ImgOut[(i + y) * nW + (j + x)] = ImgResized.at<uchar>(y, x);
+						ImgOut[(i + y) * nW + (j + x)] = ImgResized.at<unsigned char>(y, x);
 					}
 				}
 			}
@@ -186,9 +188,9 @@ void generationImage(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size,std::
 
 // Génération de l'image mosaïque haute qualité : 
 void generationImageHD(OCTET* ImgIn, int nH, int nW, int size,std::map<std::string, double> base_images){
-	int nTaille = nH*nW; OCTET* ImgTmp,*ImgOut;
-	int newnH = ((nH/size)*DIMENSION_IMAGETTE);
-	int newnW = ((nW/size)*DIMENSION_IMAGETTE);
+	OCTET *ImgTmp, *ImgOut;
+	int newnH = nH/size*DIMENSION_IMAGETTE;
+	int newnW = nW/size*DIMENSION_IMAGETTE;
 	allocation_tableau(ImgTmp,OCTET,DIMENSION_IMAGETTE*DIMENSION_IMAGETTE);
 	allocation_tableau(ImgOut,OCTET,newnH*newnW);
 	for(int i=0;i<nH;i+=size){
@@ -212,43 +214,46 @@ void generationImageHD(OCTET* ImgIn, int nH, int nW, int size,std::map<std::stri
 			}
 		}
 	}
-	ecrire_image_pgm("imageTP/Lena_HD.pgm",ImgOut,newnH,newnW);
+	ecrire_image_pgm("out/Lena_HD.pgm",ImgOut,newnH,newnW);
 }
 
 // Main pour effectuer toutes les étapes de génération de l'image mosaïque :
 int main(int argc, char* argv[])
 {
+	fs::create_directories("out");
 	std::cout<<"Conversion des images : "<<std::endl;
-	convertir_pgm("images","images_pgm",DIMENSION_IMAGETTE);
+	convertir_pgm("in/imagettes","out/imagettes",DIMENSION_IMAGETTE);
 	std::cout<<"Découpe de l'image"<<std::endl;
-	int nH, nW, nTaille;
+	int nH, nW;
+
 
 	OCTET *ImgIn,*ImgOut;
 
-	lire_nb_lignes_colonnes_image_pgm("imageTP/Lena.pgm", &nH, &nW);
-	nTaille = nH * nW;
-		allocation_tableau(ImgIn, OCTET, nTaille);
-		lire_image_pgm("imageTP/Lena.pgm", ImgIn, nH * nW);
-		allocation_tableau(ImgOut, OCTET, nTaille);
+	lire_nb_lignes_colonnes_image_pgm("in/Lena.pgm", &nH, &nW);
+	int nTaille = nH * nW;
+	allocation_tableau(ImgIn, OCTET, nTaille);
+	lire_image_pgm("in/Lena.pgm", ImgIn, nH * nW);
+	allocation_tableau(ImgOut, OCTET, nTaille);
 
-		decoupe(ImgIn, ImgOut, nH, nW, DIMENSION_CRITERE);
-		ecrire_image_pgm("imageTP/Lena_decoupe.pgm", ImgOut, nH, nW);
-		std::cout<<"Calcul des critères des imagettes"<<std::endl;
-		OCTET*ImgOut2;
-		allocation_tableau(ImgOut2, OCTET, nTaille);
-		std::string fichier_base_images = "base_images.txt";
-		std::map<std::string, double> base_images;
-		if (fs::exists(fichier_base_images)) {
-			base_images = charger_base_images_depuis_fichier(fichier_base_images);
-		} else {
-			base_images = charger_base_images("images_pgm");
-			sauver_base_Image(base_images, fichier_base_images);  // Sauvegarder pour la prochaine fois
-		}		
-		std::cout<<"Recherche des imagette et génération de l'image finale"<<std::endl;
-		generationImage(ImgOut,ImgOut2,nH,nW,DIMENSION_CRITERE,base_images);
-		ecrire_image_pgm("imageTP/Lena_mosaique.pgm", ImgOut2, nH, nW);
-		generationImageHD(ImgIn, nH,nW,DIMENSION_CRITERE,base_images);
-		free(ImgIn);
-		free(ImgOut);
+	decoupe(ImgIn, ImgOut, nH, nW, DIMENSION_CRITERE);
+	ecrire_image_pgm("out/Lena_decoupe.pgm", ImgOut, nH, nW);
+	std::cout<<"Calcul des critères des imagettes"<<std::endl;
+	OCTET* ImgOut2;
+	allocation_tableau(ImgOut2, OCTET, nTaille);
+	std::string fichier_base_images = "base_images.txt";
+	std::map<std::string, double> base_images;
+	if (fs::exists(fichier_base_images)) {
+		base_images = charger_base_images_depuis_fichier(fichier_base_images);
+	} else {
+		base_images = charger_base_images("out/imagettes");
+		sauver_base_Image(base_images, fichier_base_images);  // Sauvegarder pour la prochaine fois
+	}
+	std::cout<<"Recherche des imagette et génération de l'image finale"<<std::endl;
+	generationImage(ImgOut,ImgOut2,nH,nW,DIMENSION_CRITERE,base_images);
+	ecrire_image_pgm("out/Lena_mosaique.pgm", ImgOut2, nH, nW);
+	generationImageHD(ImgIn, nH,nW,DIMENSION_CRITERE,base_images);
+	free(ImgIn);
+	free(ImgOut);
+
 	return 0;
 }
