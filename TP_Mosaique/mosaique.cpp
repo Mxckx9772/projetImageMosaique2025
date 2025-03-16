@@ -26,6 +26,8 @@
 #include <map>
 #include <sstream>
 #include <opencv2/opencv.hpp>
+#include <unordered_set>
+
 
 namespace fs = std::filesystem;
 using namespace std;
@@ -34,6 +36,22 @@ int DIMENSION_IMAGETTE = 128;
 int DIMENSION_CRITERE = 8;
 const string ImageLue = "in/Lena.pgm";
 const string ImageEcrite = "Lena";
+int TAILLE_BASE = 141988;
+
+void afficherProgression(int current, int total) {
+    int largeur = 50; // Largeur de la barre
+    int progress = (current * largeur) / total;
+
+    std::cout << "[";
+    for (int i = 0; i < largeur; i++) {
+        if (i < progress)
+            std::cout << "=";
+        else
+            std::cout << " ";
+    }
+    std::cout << "] " << (current * 100) / total << "%\r";
+    std::cout.flush();
+}
 
 // Fonction pour convertir et redimensionner toutes les images de la banque :
 void convertir_pgm(std::string source_folder, std::string destination_folder, int size=DIMENSION_IMAGETTE){
@@ -59,9 +77,11 @@ void convertir_pgm(std::string source_folder, std::string destination_folder, in
 				}
 			}
 			cpt++;
+			afficherProgression(cpt,TAILLE_BASE);
 		}
 	}
 	std::cout << "Conversion terminée ! " <<cpt<<" Images créées !"<< std::endl;
+	TAILLE_BASE = cpt;
 }
 
 // Fonction permettant d'enregistrer les critères de chaque image dans un fichier :
@@ -137,12 +157,15 @@ int critere_img_mean(OCTET* ImgIn,int nH,int nW){
 std::map<std::string, double> charger_base_images(const std::string& dossier) {
     std::map<std::string, double> base_images;
 	OCTET* ImgTmp;
+	int cpt = 0;
 	allocation_tableau(ImgTmp, OCTET,DIMENSION_IMAGETTE*DIMENSION_IMAGETTE);
     for (const std::filesystem::directory_entry& entry : fs::recursive_directory_iterator(dossier)) {
         if (entry.path().extension() == ".pgm") {
 			lire_image_pgm(const_cast<char*>(entry.path().string().c_str()), ImgTmp, DIMENSION_IMAGETTE*DIMENSION_IMAGETTE);
 			base_images[entry.path().string()] = critere_img_mean(ImgTmp,DIMENSION_IMAGETTE,DIMENSION_IMAGETTE);
         }
+		cpt++;
+        afficherProgression(cpt, TAILLE_BASE);
     }
     return base_images;
 }
@@ -150,6 +173,7 @@ std::map<std::string, double> charger_base_images(const std::string& dossier) {
 // Méthode de génération de l'image mosaïque à partir des données calculées : 
 void generationImage(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size,std::map<std::string, double> base_images ){
 	int nTaille = nH*nW; OCTET* ImgTmp;
+	std::unordered_set<std::string> uset;
 	cv::Mat ImgTmpMat(DIMENSION_IMAGETTE, DIMENSION_IMAGETTE, CV_8U, ImgTmp);
     cv::Mat ImgResized;
 	allocation_tableau(ImgTmp,OCTET,DIMENSION_IMAGETTE*DIMENSION_IMAGETTE);
@@ -158,14 +182,17 @@ void generationImage(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size,std::
 			int distanceMin = 256;
 			std::string path = "";
 			for (const auto& pair : base_images) {
-				if (abs(pair.second-ImgIn[i*nW+j]) < distanceMin) {
-					distanceMin = abs(pair.second-ImgIn[i*nW+j]);
-					path = pair.first;
-				}
-				if(distanceMin == 0){
-					break;
+				if (uset.find(pair.first) == uset.end()) {
+					if (abs(pair.second-ImgIn[i*nW+j]) < distanceMin) {
+						distanceMin = abs(pair.second-ImgIn[i*nW+j]);
+						path = pair.first;
+					}
+					if(distanceMin == 0){
+						break;
+					}
 				}
 			}
+			uset.insert(path);
 			lire_image_pgm(const_cast<char*>(path.c_str()),ImgTmp, DIMENSION_IMAGETTE*DIMENSION_IMAGETTE);
 			// Convertir l'imagette en une matrice OpenCV
 			ImgTmpMat = cv::Mat(DIMENSION_IMAGETTE, DIMENSION_IMAGETTE, CV_8U, ImgTmp);
@@ -191,6 +218,7 @@ void generationImageHD(OCTET* ImgIn, int nH, int nW, int size,std::map<std::stri
 	OCTET *ImgTmp, *ImgOut;
 	int newnH = nH/size*DIMENSION_IMAGETTE;
 	int newnW = nW/size*DIMENSION_IMAGETTE;
+	std::unordered_set<std::string> uset;
 	allocation_tableau(ImgTmp,OCTET,DIMENSION_IMAGETTE*DIMENSION_IMAGETTE);
 	allocation_tableau(ImgOut,OCTET,newnH*newnW);
 	for(int i=0;i<nH;i+=size){
@@ -198,12 +226,14 @@ void generationImageHD(OCTET* ImgIn, int nH, int nW, int size,std::map<std::stri
 			int distanceMin = 256;
 			std::string path = "";
 			for (const auto& pair : base_images) {
-				if (abs(pair.second-ImgIn[i*nW+j]) < distanceMin) {
-					distanceMin = abs(pair.second-ImgIn[i*nW+j]);
-					path = pair.first;
-				}
-				if(distanceMin == 0){
-					break;
+				if (uset.find(pair.first) == uset.end()) {
+					if (abs(pair.second-ImgIn[i*nW+j]) < distanceMin) {
+						distanceMin = abs(pair.second-ImgIn[i*nW+j]);
+						path = pair.first;
+					}
+					if(distanceMin == 0){
+						break;
+					}
 				}
 			}
 			lire_image_pgm(const_cast<char*>(path.c_str()),ImgTmp, DIMENSION_IMAGETTE*DIMENSION_IMAGETTE);
@@ -222,7 +252,7 @@ int main(int argc, char* argv[])
 {
 	fs::create_directories("out");
 	std::cout<<"Conversion des images : "<<std::endl;
-	convertir_pgm("in/imagettes","out/imagettes",DIMENSION_IMAGETTE);
+	convertir_pgm("../base_images","out/imagettes",DIMENSION_IMAGETTE);
 	std::cout<<"Découpe de l'image"<<std::endl;
 	int nH, nW;
 
