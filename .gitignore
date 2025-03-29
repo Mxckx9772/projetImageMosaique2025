@@ -15,3 +15,5 @@ out/
 base_images.txt
 mosaique
 /base_images
+TP_Mosaique/base_images_ppm.txt
+TP_Mosaique/mosaique_ppm
