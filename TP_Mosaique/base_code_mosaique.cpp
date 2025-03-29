@@ -825,7 +825,7 @@ int main(int argc, char* argv[])
 
         redimensionner_image(ImgIn, nH,nW);
         nTaille = nH * nW;
-        ecrire_image_ppm(const_cast<char*>((ImageEcrite+"_redim.pgm").c_str()), ImgIn, nH, nW);
+        ecrire_image_ppm(const_cast<char*>(("./out/"+ImageEcrite+"_redim.ppm").c_str())), ImgIn, nH, nW);
         allocation_tableau(ImgIn_pgm, OCTET, nTaille);
         allocation_tableau(ImgOut_pgm, OCTET, nTaille);
         allocation_tableau(ImgOut, OCTET, nTaille*3);
