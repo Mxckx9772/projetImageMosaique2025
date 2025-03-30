@@ -5,12 +5,17 @@ Application utilisant la synthèse d'image mosaïque pour la sécurité et la pr
 
 ## Installation
 
-1.  Pour cloner le dépôt : 
+1.  Pour cloner le dépôt avec ssh: 
+
+    ```bash
+    git clone git@github.com:Mxckx9772/projetImageMosaique2025.git
+    ```
+2.  Pour cloner le dépôt avec http: 
 
     ```bash
     git clone https://github.com/Mxckx9772/projetImageMosaique2025.git
     ```
-2.  Pour compiler le projet :
+3.  Pour compiler le projet :
 
     ```bash
     cd projetImageMosaique2025
@@ -37,3 +42,7 @@ Application utilisant la synthèse d'image mosaïque pour la sécurité et la pr
 * **Titre :** *Three-pass protocol scheme for bitmap image security by using vernam cipher algorithm*
     * **Auteur :** D. Rachmawati
     * **URL :** https://diglib.eg.org/server/api/core/bitstreams/9f0df882-5838-4067-a555-2ade20d925ca/content
+
+* **Titre :** *Sécurisation d’image par crypto-tatouage*
+    * **Auteur :** W. Puech, J. M. Rodrigues
+    * **URL :** https://www.researchgate.net/profile/William-Puech/publication/242085875_Securisation_d%27Image_par_Crypto-Tatouage/links/55acfd1208aea3d086862eb9/Securisation-dImage-par-Crypto-Tatouage.pdf
