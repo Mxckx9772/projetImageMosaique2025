@@ -1,31 +1,41 @@
 COMPILER = g++
 FLAGS = -Wall
 
-SRC_DIR = src
+INCLUDE_DIR = include
+LIB_DIR = lib
 OBJ_DIR = obj
 BIN_DIR = bin
-CIBLE = $(BIN_DIR)/main
 
-SRCS = $(wildcard $(SRC_DIR)/*.cpp)
-OBJS = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
 
-all: $(CIBLE)
-	rm -f main.o
+TARGET = $(BIN_DIR)/main
+MAIN = main.cpp
 
-$(CIBLE): $(OBJS) main.o $(BIN_DIR)
-	$(COMPILER) $(CXXFLAGS) $(OBJS) main.o -o $@
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(OBJ_DIR)
-	$(COMPILER) $(CXXFLAGS) -c $< -o $@
+LIB = $(wildcard $(LIB_DIR)/*.cpp)
+OBJ = $(patsubst $(LIB_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(LIB))
 
-main.o: main.cpp
-	$(COMPILER) $(CXXFLAGS) -c $< -o $@
+# Compilation
+all: $(TARGET)
 
+# Compilation des objets
+$(OBJ_DIR)/%.o: $(LIB_DIR)/%.cpp $(OBJ_DIR)
+	$(COMPILER) $(FLAGS) -I $(INCLUDE_DIR) -c $< -o $@
+
+# Linking du programme
+$(TARGET): $(OBJ) $(MAIN) $(BIN_DIR)
+	$(COMPILER) $(FLAGS) $(OBJ) $(MAIN) -o $@
+
+# Instanciation des dossiers
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
+# Supression des dossiers
 clean:
-	rm -rf $(OBJ_DIR) $(BIN_DIR)
+	rm -rf $(OBJ_DIR) $(BIN_DIR) $(TARGET)
+
+# Execution du programe
+run: $(TARGET)
+	./$(TARGET)

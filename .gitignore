@@ -3,6 +3,8 @@ obj/
 bin/
 img/
 *.o
+*.pgm
+*.ppm
 
 # Cache
 .vscode/

@@ -1,23 +1,35 @@
+// Bibliothèques standards
 #include <stdio.h>
 #include <stdlib.h>
+#include <iostream>
 
-#include "src/ImageGrey.h"
+// Inlcudes
+#include "include/ImagePPM.hpp"
+
+using namespace std;
+
+int main(int argc, char** argv){
+    ImagePPM loutre, loutreEncryt, resizeLoutre;
+    size_t blockSize = 12;
+    size_t* key;
+
+    loutre.read("loutre.ppm");
+    loutreEncryt = loutre;
+    resizeLoutre = loutre;
+
+    loutre.segment(blockSize);
+    loutreEncryt.segment(blockSize);
 
 
-int main(int argc, char* argv[]){
-  char imgName[250];
-  
-  if (argc != 2){
-    printf("Usage:\n(1) Image.pgm\n"); 
-    exit(1);
-  }
-   
-  sscanf (argv[1],"%s", imgName);
+    key = loutreEncryt.swap(blockSize);
 
-  ImageGrey Img = ImageGrey(imgName);
+    loutreEncryt.sort(key, blockSize);
 
-  printf("Ecriture de l'image...\n");
-  Img.writeImage("Name.pgm");
+    resizeLoutre.resize(100, 512);
 
-  return 0;
+    loutre.write("segment_loutre.ppm", "Image Segmentée.");
+    loutreEncryt.write("encrypt_loutre.ppm", "Image Chiffrée.");
+    resizeLoutre.write("loutre_resize.ppm", "Image Chiffrée.");
+
+    return EXIT_SUCCESS;
 }
