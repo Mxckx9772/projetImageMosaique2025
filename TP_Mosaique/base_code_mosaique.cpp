@@ -1,30 +1,28 @@
 // Première version de l'implémentation du TP Image
 // MacOS : brew install opencv
-// g++ mosaique.cpp -o mosaique $(pkg-config --cflags --libs opencv4) -std=c++17
-// ./mosaique
+//     g++ base_code_mosaique.cpp -o base_code_mosaique $(pkg-config --cflags --libs opencv4) -std=c++17
+//     ./base_code_mosaique
 // Linux : sudo apt update
-// sudo apt upgrade
-// sudo apt install libopencv-dev
-//sudo apt install nlohmann-json3-dev
-// g++ base_code_mosaique.cpp -o mosaique $(pkg-config --cflags --libs opencv4) -std=c++17 -ljpeg -pthread
-// ./mosaique
+//     sudo apt upgrade
+//     sudo apt install libopencv-dev
+//     sudo apt install nlohmann-json3-dev
+//     g++ base_code_mosaique.cpp -o mosaique $(pkg-config --cflags --libs opencv4) -std=c++17 -ljpeg -pthread
+//     ./base_code_mosaique
 // Les résultats sont disponibles dans le dossier ImageTP :
-// Image_mosaique.pgm : Image découpée en bloc
-// Image_best.pgm : Image mosaïque avec compression des imagettes
-// Image_HD.pgm : Image haute qualité avec imagettes sans compression
+//     Image_mosaique.pgm : Image découpée en bloc
+//     Image_best.pgm : Image mosaïque avec compression des imagettes
+//     Image_HD.pgm : Image haute qualité avec imagettes sans compression
 
 // Lien vers la banque d'image : https://drive.google.com/drive/folders/1qA-8ZMroFYy72y2pfmN4nWWo_82tpCod?usp=sharing
 // lien pour le csv.h : https://github.com/ben-strasser/fast-cpp-csv-parser/blob/master/csv.h
-//lien vers la banque prête à l'emploi : https://filesender.renater.fr/?s=download&token=300ef385-64e3-481a-9cf5-e1baf1fc9430
+// Lien vers la banque prête à l'emploi : https://filesender.renater.fr/?s=download&token=300ef385-64e3-481a-9cf5-e1baf1fc9430
 
-
-#include <stdio.h>
+#include <cstdio>
 #include "image_ppm.h"
 #include <iostream>
 #include <cmath>
 #include <filesystem>
 #include <string>
-#include <filesystem>
 #include <fstream>
 #include <map>
 #include <sstream>
@@ -32,14 +30,10 @@
 #include <unordered_set>
 #include "../src/csv.h"
 #include <chrono>
-#include <omp.h>
-#include <jpeglib.h>
 #include <thread>
 #include <vector>
-namespace fs = std::filesystem;
+
 using namespace std;
-#include <nlohmann/json.hpp>
-using json = nlohmann::json;
 
 // Paramètres globaux
 int DIMENSION_IMAGETTE;
@@ -52,36 +46,36 @@ string CRITERE = "moyenne"; // Critère par défaut
 //-------------------------------------------------------------------------------------------------------------
 
 // Fonction pour afficher la progression de la conversion des images
-void afficherProgression(int current, int total, std::chrono::steady_clock::time_point start_time) {
+void afficherProgression(int current, int total, chrono::steady_clock::time_point start_time) {
     int largeur = 50; // Largeur de la barre
     int progress = (current * largeur) / total;
-    std::cout << "[";
+    cout << "[";
     for (int i = 0; i < largeur; i++) {
-        if (i < progress) std::cout << "=";
-        else std::cout << " ";
+        if (i < progress) cout << "=";
+        else cout << " ";
     }
-    std::cout << "] " << (current * 100) / total << "%";
-    auto now = std::chrono::steady_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - start_time).count();
+    cout << "] " << (current * 100) / total << "%";
+    auto now = chrono::steady_clock::now();
+    auto elapsed = chrono::duration_cast<chrono::seconds>(now - start_time).count();
     int remaining = (current > 0) ? ((elapsed * (total - current)) / current) : 0;
     int minutes = remaining / 60;
     int seconds = remaining % 60;
-    if(seconds < 10) std::cout << " Temps restant estimé : " << minutes << "m 0" << seconds << "s\r";
-    else std::cout << " Temps restant estimé : " << minutes << "m " << seconds << "s\r";
-    std::cout.flush();
+    if(seconds < 10) cout << " Temps restant estimé : " << minutes << "m 0" << seconds << "s\r";
+    else cout << " Temps restant estimé : " << minutes << "m " << seconds << "s\r";
+    cout.flush();
 }
 
 // Fonction pour convertir une image JPEG en PPM
-void convertir_jpg_en_ppm(const std::string& chemin_jpg, const std::string& chemin_ppm,int size) {
+void convertir_jpg_en_ppm(const string& chemin_jpg, const string& chemin_ppm,int size) {
     cv::Mat img = cv::imread(chemin_jpg, cv::IMREAD_COLOR);
     if (img.empty()) {
-        std::cerr << "Erreur : Impossible de lire l'image " << chemin_jpg << std::endl;
+        cerr << "Erreur : Impossible de lire l'image " << chemin_jpg << endl;
         return;
     }
     cv::Mat img_resized;
     cv::resize(img,img_resized,cv::Size(size,size));
     if (!cv::imwrite(chemin_ppm, img_resized)) {
-        std::cerr << "Erreur : Impossible d'écrire l'image " << chemin_ppm << std::endl;
+        cerr << "Erreur : Impossible d'écrire l'image " << chemin_ppm << endl;
         return;
     }
 }
@@ -103,11 +97,11 @@ void redimensionner_image(OCTET*& ImgIn, int& nH, int& nW) {
     int newH = ceil(nH / DIMENSION_IMAGETTE) * DIMENSION_IMAGETTE;
     int newW = ceil(nW / DIMENSION_IMAGETTE) * DIMENSION_IMAGETTE;
     if (newH == nH && newW == nW) {
-        std::cout << "L'image est déjà un multiple de " << DIMENSION_IMAGETTE << "." << std::endl;
+        cout << "L'image est déjà un multiple de " << DIMENSION_IMAGETTE << "." << endl;
         return;
     }
-    std::cout << "Redimensionnement de l'image pour être un multiple de " << DIMENSION_IMAGETTE << "." << std::endl;
-    std::cout << "Dimensions originales : " << nH << "x" << nW << ", nouvelles dimensions : " << newH << "x" << newW << "." << std::endl;
+    cout << "Redimensionnement de l'image pour être un multiple de " << DIMENSION_IMAGETTE << "." << endl;
+    cout << "Dimensions originales : " << nH << "x" << nW << ", nouvelles dimensions : " << newH << "x" << newW << "." << endl;
     OCTET* ImgResized;
     allocation_tableau(ImgResized, OCTET, newH * newW * 3);
     for (int i = 0; i < newH; i++) {
@@ -128,10 +122,10 @@ void redimensionner_image(OCTET*& ImgIn, int& nH, int& nW) {
             //-------------------------------------------------------------------------------------
 
 // Fonction permettant d'enregistrer les critères de chaque image dans un fichier :
-void sauver_base_Image(const std::unordered_map<std::string, std::unordered_map<std::string, std::vector<double>>>& base_images, const std::string& fichier) {
-    std::ofstream out(fichier);
+void sauver_base_Image(const unordered_map<string, unordered_map<string, vector<double>>>& base_images, const string& fichier) {
+    ofstream out(fichier);
     if (!out) {
-        std::cerr << "Erreur d'ouverture du fichier pour la sauvegarde." << std::endl;
+        cerr << "Erreur d'ouverture du fichier pour la sauvegarde." << endl;
         return;
     }
 
@@ -163,53 +157,51 @@ void sauver_base_Image(const std::unordered_map<std::string, std::unordered_map<
         out << "\n"; // Nouvelle ligne pour chaque image
     }
 
-    std::cout << "Base d'images sauvegardée dans : " << fichier << std::endl;
+    cout << "Base d'images sauvegardée dans : " << fichier << endl;
 }
 
 // Méthode pour charger les données enregistrées précédemment : 
-std::unordered_map<std::string, std::unordered_map<std::string, std::vector<double>>> charger_base_images_depuis_fichier(const std::string& fichier) {
-    std::unordered_map<std::string, std::unordered_map<std::string, std::vector<double>>> base_images;
-    std::ifstream in(fichier);
+unordered_map<string, unordered_map<string, vector<double>>> charger_base_images_depuis_fichier(const string& fichier) {
+    unordered_map<string, unordered_map<string, vector<double>>> base_images;
+    ifstream in(fichier);
 
     if (!in) {
-        std::cerr << "Erreur d'ouverture du fichier pour la lecture : " << fichier << std::endl;
+        cerr << "Erreur d'ouverture du fichier pour la lecture : " << fichier << endl;
         return base_images;
     }
 
-    std::string line;
-    while (std::getline(in, line)) {
-        std::istringstream iss(line);
-        std::string path, histogramme_str;
+    string line;
+    while (getline(in, line)) {
+        istringstream iss(line);
+        string path, histogramme_str;
         double moyenne;
-        char delimiter;
 
         // Lire le chemin et la moyenne
-        if (std::getline(iss, path, ',') && iss >> moyenne && std::getline(iss, histogramme_str, ',')) {
+        if (getline(iss, path, ',') && iss >> moyenne && getline(iss, histogramme_str, ',')) {
             // Convertir l'histogramme (séparé par des points-virgules) en vecteur de doubles
-            std::vector<double> histogramme;
-            std::istringstream hist_stream(histogramme_str);
-            std::string hist_value;
-            while (std::getline(hist_stream, hist_value, ';')) {
-                histogramme.push_back(std::stod(hist_value));
+            vector<double> histogramme;
+            istringstream hist_stream(histogramme_str);
+            string hist_value;
+            while (getline(hist_stream, hist_value, ';')) {
+                histogramme.push_back(stod(hist_value));
             }
 
             // Ajouter les données dans la structure
             base_images[path]["moyenne"] = {moyenne};
             base_images[path]["histogramme"] = histogramme;
         } else {
-            std::cerr << "Format incorrect dans le fichier : " << line << std::endl;
+            cerr << "Format incorrect dans le fichier : " << line << endl;
         }
     }
 
-    std::cout << "Base d'images chargée depuis : " << fichier << " (" << base_images.size() << " images)" << std::endl;
+    cout << "Base d'images chargée depuis : " << fichier << " (" << base_images.size() << " images)" << endl;
     return base_images;
 }
 
 // Méthode pour découper l'image en blocs de taille choisie : 
 void decoupe(OCTET*Imgin,OCTET*ImgOut,int nH,int nW,int size){
-	int nTaille = nH * nW;
 	if(nH%size!=0 || nW%size!=0){
-		std::cout << "Erreur : les dimensions de l'image ne sont paun multiple des dimensions de la mosaique" << std::endl;
+		cout << "Erreur : les dimensions de l'image ne sont paun multiple des dimensions de la mosaique" << endl;
 		return;
 	}
 	for (int i=0; i < nH; i+=size){
@@ -242,7 +234,7 @@ void decoupe(OCTET*Imgin,OCTET*ImgOut,int nH,int nW,int size){
 // }
 
 //Calcul du critère moyenneur :
-unordered_map<string, vector<double>> calculer_criteres_pgm(OCTET* ImgIn, int nH, int nW, double& moyenne, std::vector<double>& histogramme ) {
+unordered_map<string, vector<double>> calculer_criteres_pgm(OCTET* ImgIn, int nH, int nW, double& moyenne, vector<double>& histogramme ) {
     moyenne = 0.0;
     histogramme.assign(256, 0.0);
     int nTaille = nH * nW;
@@ -256,29 +248,29 @@ unordered_map<string, vector<double>> calculer_criteres_pgm(OCTET* ImgIn, int nH
 }
 
 // Fonction pour calculer la base d'images et stocker leurs moyennes : 
-unordered_map<string,unordered_map<std::string, vector<double>>> charger_base_images(const std::string& dossier, int size) {
-    unordered_map<string,unordered_map<std::string, vector<double>>>base_images;
-    std::vector<std::filesystem::directory_entry> fichiers;
+unordered_map<string,unordered_map<string, vector<double>>> charger_base_images(const string& dossier, int size) {
+    unordered_map<string,unordered_map<string, vector<double>>>base_images;
+    vector<filesystem::directory_entry> fichiers;
 
     // Collecter tous les fichiers PPM dans le dossier
-    for (const auto& entry : fs::recursive_directory_iterator(dossier)) {
+    for (const auto& entry : filesystem::recursive_directory_iterator(dossier)) {
         if (entry.path().extension() == ".ppm") {
             fichiers.push_back(entry);
         }
     }
 
     // Nombre de threads à utiliser
-    int num_threads = std::min(8u, std::thread::hardware_concurrency());
-    std::cout << "Nombre de threads : " << num_threads << std::endl;
+    int num_threads = min(8u, thread::hardware_concurrency());
+    cout << "Nombre de threads : " << num_threads << endl;
 
     // Diviser les fichiers en groupes pour chaque thread
     size_t total_fichiers = fichiers.size();
     size_t fichiers_par_thread = (total_fichiers + num_threads - 1) / num_threads;
 
-    std::mutex mtx; // Mutex pour protéger l'accès à `base_images`
-    std::mutex progress_mtx; // Mutex pour protéger l'affichage de la progression
+    mutex mtx; // Mutex pour protéger l'accès à `base_images`
+    mutex progress_mtx; // Mutex pour protéger l'affichage de la progression
     int cpt = 0; // Compteur partagé pour la progression
-    auto start_time = std::chrono::steady_clock::now();
+    auto start_time = chrono::steady_clock::now();
 
     auto traiter_fichiers = [&](size_t start, size_t end) {
         OCTET* ImgTmp;
@@ -286,23 +278,23 @@ unordered_map<string,unordered_map<std::string, vector<double>>> charger_base_im
 
         for (size_t i = start; i < end; ++i) {
             const auto& entry = fichiers[i];
-            std::string chemin = entry.path().string();
+            string chemin = entry.path().string();
 
             // Lire l'image et calculer le critère
             lire_image_ppm(const_cast<char*>(chemin.c_str()), ImgTmp, size * size);
             double moyenne;
-            std::vector<double> histogramme;
+            vector<double> histogramme;
             auto critere = calculer_criteres_pgm(ImgTmp, size, size, moyenne, histogramme);
 
             // Protéger l'accès à `base_images` avec un mutex
             {
-                std::lock_guard<std::mutex> lock(mtx);
+                lock_guard<mutex> lock(mtx);
                 base_images[chemin] = critere;
             }
 
             // Mettre à jour la progression
             {
-                std::lock_guard<std::mutex> progress_lock(progress_mtx);
+                lock_guard<mutex> progress_lock(progress_mtx);
                 cpt++;
                 afficherProgression(cpt, total_fichiers, start_time);
             }
@@ -312,10 +304,10 @@ unordered_map<string,unordered_map<std::string, vector<double>>> charger_base_im
     };
 
     // Lancer les threads
-    std::vector<std::thread> threads;
+    vector<thread> threads;
     for (int t = 0; t < num_threads; ++t) {
         size_t start = t * fichiers_par_thread;
-        size_t end = std::min(start + fichiers_par_thread, total_fichiers);
+        size_t end = min(start + fichiers_par_thread, total_fichiers);
         if (start < end) {
             threads.emplace_back(traiter_fichiers, start, end);
         }
@@ -328,7 +320,7 @@ unordered_map<string,unordered_map<std::string, vector<double>>> charger_base_im
         }
     }
 
-    std::cout << std::endl; // Pour terminer la ligne de progression proprement
+    cout << endl; // Pour terminer la ligne de progression proprement
     return base_images;
 }
 
@@ -340,10 +332,10 @@ unordered_map<string,unordered_map<std::string, vector<double>>> charger_base_im
 // Fonction permettant d'enregistrer les critères de chaque image dans un fichier :
 // O(N)
 // N = taille de base_images
-void sauver_base_Image_ppm(const std::unordered_map<std::string, std::unordered_map<std::string, std::vector<double>>>& base_images, const std::string& fichier) {
-    std::ofstream out(fichier);
+void sauver_base_Image_ppm(const unordered_map<string, unordered_map<string, vector<double>>>& base_images, const string& fichier) {
+    ofstream out(fichier);
     if (!out) {
-        std::cerr << "Erreur : Impossible d'ouvrir le fichier " << fichier << " pour l'écriture." << std::endl;
+        cerr << "Erreur : Impossible d'ouvrir le fichier " << fichier << " pour l'écriture." << endl;
         return;
     }
 
@@ -363,7 +355,7 @@ void sauver_base_Image_ppm(const std::unordered_map<std::string, std::unordered_
         }
 
         // Vérifier et écrire les histogrammes
-        for (const std::string& hist_key : {"hist_R", "hist_G", "hist_B"}) {
+        for (const string& hist_key : {"hist_R", "hist_G", "hist_B"}) {
             out << ",";
             if (pair.second.find(hist_key) != pair.second.end()) {
                 const auto& histogramme = pair.second.at(hist_key);
@@ -381,49 +373,49 @@ void sauver_base_Image_ppm(const std::unordered_map<std::string, std::unordered_
         out << "\n"; // Nouvelle ligne pour chaque image
     }
 
-    std::cout << "Données sauvegardées dans le fichier : " << fichier << std::endl;
+    cout << "Données sauvegardées dans le fichier : " << fichier << endl;
 }
 //Méthode pour charger les données enregistrées précédemment : 
 //O(N log N)
 //N = taille de base_images
-std::unordered_map<std::string, std::unordered_map<std::string, std::vector<double>>> charger_base_images_depuis_fichier_ppm(const std::string& fichier) {
-    std::unordered_map<std::string, std::unordered_map<std::string, std::vector<double>>> base_images;
-    std::ifstream in(fichier);
+unordered_map<string, unordered_map<string, vector<double>>> charger_base_images_depuis_fichier_ppm(const string& fichier) {
+    unordered_map<string, unordered_map<string, vector<double>>> base_images;
+    ifstream in(fichier);
 
     if (!in) {
-        std::cerr << "Erreur d'ouverture du fichier pour la lecture : " << fichier << std::endl;
+        cerr << "Erreur d'ouverture du fichier pour la lecture : " << fichier << endl;
         return base_images;
     }
 
-    std::string line;
-    while (std::getline(in, line)) {
-        std::istringstream iss(line);
-        std::string path, hist_R_str, hist_G_str, hist_B_str;
+    string line;
+    while (getline(in, line)) {
+        istringstream iss(line);
+        string path, hist_R_str, hist_G_str, hist_B_str;
         double moyenne_R, moyenne_G, moyenne_B;
         char delimiter;
 
         // Lire le chemin, les moyennes et les histogrammes
-        if (std::getline(iss, path, ',') &&
+        if (getline(iss, path, ',') &&
             iss >> moyenne_R >> delimiter &&
             iss >> moyenne_G >> delimiter &&
             iss >> moyenne_B &&
-            std::getline(iss, hist_R_str, ',') &&
-            std::getline(iss, hist_G_str, ',') &&
-            std::getline(iss, hist_B_str, ',')) {
+            getline(iss, hist_R_str, ',') &&
+            getline(iss, hist_G_str, ',') &&
+            getline(iss, hist_B_str, ',')) {
             
             // Convertir les histogrammes (séparés par des points-virgules) en vecteurs de doubles
-            std::vector<double> hist_R, hist_G, hist_B;
-            std::istringstream hist_R_stream(hist_R_str), hist_G_stream(hist_G_str), hist_B_stream(hist_B_str);
-            std::string hist_value;
+            vector<double> hist_R, hist_G, hist_B;
+            istringstream hist_R_stream(hist_R_str), hist_G_stream(hist_G_str), hist_B_stream(hist_B_str);
+            string hist_value;
 
-            while (std::getline(hist_R_stream, hist_value, ';')) {
-                hist_R.push_back(std::stod(hist_value));
+            while (getline(hist_R_stream, hist_value, ';')) {
+                hist_R.push_back(stod(hist_value));
             }
-            while (std::getline(hist_G_stream, hist_value, ';')) {
-                hist_G.push_back(std::stod(hist_value));
+            while (getline(hist_G_stream, hist_value, ';')) {
+                hist_G.push_back(stod(hist_value));
             }
-            while (std::getline(hist_B_stream, hist_value, ';')) {
-                hist_B.push_back(std::stod(hist_value));
+            while (getline(hist_B_stream, hist_value, ';')) {
+                hist_B.push_back(stod(hist_value));
             }
 
             // Ajouter les données dans la structure
@@ -432,19 +424,17 @@ std::unordered_map<std::string, std::unordered_map<std::string, std::vector<doub
             base_images[path]["hist_G"] = hist_G;
             base_images[path]["hist_B"] = hist_B;
         } else {
-            std::cerr << "Format incorrect dans le fichier : " << line << std::endl;
+            cerr << "Format incorrect dans le fichier : " << line << endl;
         }
     }
 
-    std::cout << "Base d'images PPM chargée depuis : " << fichier << " (" << base_images.size() << " images)" << std::endl;
+    cout << "Base d'images PPM chargée depuis : " << fichier << " (" << base_images.size() << " images)" << endl;
     return base_images;
 }
 
-void decoupe_ppm(OCTET*Imgin,OCTET*ImgOut,int nH,int nW,int size){
-	int nTaille = nH * nW;
-    int nTaille3 = nTaille*3;
+void decoupe_ppm(OCTET* Imgin, OCTET* ImgOut, int nH, int nW, int size){
 	if(nH%size!=0 || nW%size!=0){
-		std::cout << "Erreur : les dimensions de l'image ne sont pas un multiple des dimensions de la mosaique" << std::endl;
+		cout << "Erreur : les dimensions de l'image ne sont pas un multiple des dimensions de la mosaique" << endl;
 		return;
 	}
 	for (int i=0; i < nH; i+=size){
@@ -471,7 +461,7 @@ void decoupe_ppm(OCTET*Imgin,OCTET*ImgOut,int nH,int nW,int size){
 
 //Calcul du critère moyenneur :
 // O(nH*nW)
-// std::vector<double> critere_img_mean_ppm(OCTET* ImgIn,int nH,int nW){
+// vector<double> critere_img_mean_ppm(OCTET* ImgIn,int nH,int nW){
 // 	double moyR = 0; double moyG =0; double moyB = 0;
 // 	int nTaille = nH*nW;
 //     int nTaille3 = nTaille*3;
@@ -486,10 +476,10 @@ void decoupe_ppm(OCTET*Imgin,OCTET*ImgOut,int nH,int nW,int size){
 //Calcul du critère moyenneur :
 // O(nH*nW)
 unordered_map<string,vector<double>> critere_img_mean_ppm(OCTET* ImgIn,int nH,int nW){
-    std::vector<double> moyenne;
-    std::vector<double> hist_R;
-    std::vector<double> hist_G;
-    std::vector<double> hist_B;
+    vector<double> moyenne;
+    vector<double> hist_R;
+    vector<double> hist_G;
+    vector<double> hist_B;
 	moyenne = {0.0,0.0,0.0};
     hist_R.assign(256,0.0);
     hist_G.assign(256,0.0);
@@ -515,13 +505,13 @@ unordered_map<string,vector<double>> critere_img_mean_ppm(OCTET* ImgIn,int nH,in
 
 
 // Fonction pour calculer la base d'images et stocker leurs moyennes :
-unordered_map<std::string, unordered_map<string,vector<double>>> charger_base_images_ppm(const std::string& dossier,int size) {
-    unordered_map<std::string, unordered_map<string,vector<double>>> base_images;
+unordered_map<string, unordered_map<string,vector<double>>> charger_base_images_ppm(const string& dossier,int size) {
+    unordered_map<string, unordered_map<string,vector<double>>> base_images;
 	OCTET* ImgTmp;
     int cpt = 0;
 	allocation_tableau(ImgTmp, OCTET,size*size*3);
-    auto start_time = std::chrono::steady_clock::now();
-    for (const auto& entry : fs::recursive_directory_iterator(dossier)) {
+    auto start_time = chrono::steady_clock::now();
+    for (const auto& entry : filesystem::recursive_directory_iterator(dossier)) {
         if (entry.path().extension() == ".ppm") {
             lire_image_ppm(const_cast<char*>(entry.path().string().c_str()), ImgTmp, size*size);
 			base_images[entry.path().string()] = critere_img_mean_ppm(ImgTmp,size,size);
@@ -535,31 +525,31 @@ unordered_map<std::string, unordered_map<string,vector<double>>> charger_base_im
 
 
 // Génération de la base d'images à partir d'un dossier source
-void convertir(std::string source_folder, std::string ppm_folder, int size) {
-    if (fs::exists(ppm_folder)) {
-        std::cout << "Le dossier " << ppm_folder << " existent déjà. Conversion ignorée." << std::endl;
+void convertir(const string& source_folder, const string& ppm_folder, int size) {
+    if (filesystem::exists(ppm_folder)) {
+        cout << "Le dossier " << ppm_folder << " existent déjà. Conversion ignorée." << endl;
         return;
     }
     int cpt = 0;
-    fs::create_directories(ppm_folder);
-    auto start_time = std::chrono::steady_clock::now();
-    std::vector<std::thread> threads;
-    int num_threads = std::min(8u, std::thread::hardware_concurrency());
-    std::cout << "Nombre de threads : " << num_threads << std::endl;
-    std::mutex mtx;
-    std::condition_variable cv;
+    filesystem::create_directories(ppm_folder);
+    auto start_time = chrono::steady_clock::now();
+    vector<thread> threads;
+    int num_threads = min(8u, thread::hardware_concurrency());
+    cout << "Nombre de threads : " << num_threads << endl;
+    mutex mtx;
+    condition_variable cv;
     int active_threads = 0;
-    for (const auto& entry : fs::recursive_directory_iterator(source_folder)) {
+    for (const auto& entry : filesystem::recursive_directory_iterator(source_folder)) {
         if (entry.is_regular_file()) {
-            std::string extension = entry.path().extension().string();
+            string extension = entry.path().extension().string();
             if (extension == ".jpg" || extension == ".jpeg") { // Vérifier l'extension
-                std::unique_lock<std::mutex> lock(mtx);
+                unique_lock<mutex> lock(mtx);
                 cv.wait(lock, [&] { return active_threads < num_threads; });
                 active_threads++;
                 threads.emplace_back([&, img_path = entry.path().string(), cpt]() {
-                    convertir_jpg_en_ppm(img_path, ppm_folder + "/" + std::to_string(cpt) + ".ppm", size);
+                    convertir_jpg_en_ppm(img_path, ppm_folder + "/" + to_string(cpt) + ".ppm", size);
                     {
-                        std::lock_guard<std::mutex> lock(mtx);
+                        lock_guard lock(mtx);
                         active_threads--;
                     }
                     cv.notify_one();
@@ -567,7 +557,7 @@ void convertir(std::string source_folder, std::string ppm_folder, int size) {
                 cpt++;
                 afficherProgression(cpt, TAILLE_BASE, start_time);
             } else {
-                std::cerr << "Fichier ignoré (non JPEG) : " << entry.path() << std::endl;
+                cerr << "Fichier ignoré (non JPEG) : " << entry.path() << endl;
             }
         }
     }
@@ -576,24 +566,24 @@ void convertir(std::string source_folder, std::string ppm_folder, int size) {
             thread.join();
         }
     }
-    std::cout << "Conversion terminée ! " << cpt << " Images créées !" << std::endl;
+    cout << "Conversion terminée ! " << cpt << " Images créées !" << endl;
     TAILLE_BASE = cpt;
 }
 
-void generer_base_imagettes(const std::string& dossier_source, const std::string& dossier_destination) {
-    if(!fs::exists(dossier_source)){
-        std::cout<<"Le dossier source n'existe pas."<<std::endl;
+void generer_base_imagettes(const string& dossier_source, const string& dossier_destination) {
+    if(!filesystem::exists(dossier_source)){
+        cout<<"Le dossier source n'existe pas."<<endl;
         return;
     }
     for(int i=2; i<=7 ;i++){
         int taille_imagette = pow(2,i);
-        std::string dossier_sortie = dossier_destination + "/imagettes_" + std::to_string(taille_imagette);
-        std::cout<<"Génération de la base pour les imagettes de taille : "<<taille_imagette<<std::endl;
-        if(!fs::exists(dossier_sortie)){
+        string dossier_sortie = dossier_destination + "/imagettes_" + to_string(taille_imagette);
+        cout<<"Génération de la base pour les imagettes de taille : "<<taille_imagette<<endl;
+        if(!filesystem::exists(dossier_sortie)){
             convertir(dossier_source, dossier_sortie, taille_imagette);
-            fs::create_directories(dossier_sortie);
-            std::string fichier_base_images = dossier_sortie + "/base_images_" + std::to_string(taille_imagette)+".csv";
-            std::string fichier_base_images_ppm = dossier_sortie + "/base_images_ppm_" + std::to_string(taille_imagette)+".csv";
+            filesystem::create_directories(dossier_sortie);
+            string fichier_base_images = dossier_sortie + "/base_images_" + to_string(taille_imagette)+".csv";
+            string fichier_base_images_ppm = dossier_sortie + "/base_images_ppm_" + to_string(taille_imagette)+".csv";
             auto base_images = charger_base_images(dossier_sortie , taille_imagette);
             sauver_base_Image(base_images, fichier_base_images);
             auto base_images_ppm = charger_base_images_ppm(dossier_sortie, taille_imagette);
@@ -602,14 +592,14 @@ void generer_base_imagettes(const std::string& dossier_source, const std::string
     }
 }
 
-std::vector<int> choix_taille_imagette(OCTET* ImgIn, int nH, int nW){
-    std::vector<int> tailles_imagettes;
-    std::vector<int> tailles = {20,40,80};
+vector<int> choix_taille_imagette(OCTET* ImgIn, int nH, int nW){
+    vector<int> tailles_imagettes;
+    vector<int> tailles = {20,40,80};
     int nv_entree;
     for(int blocs : tailles){
         int taille_imagette = nW/blocs;
-        nv_entree = max(4,min(128, static_cast<int>(pow(2,std::round(std::log2(taille_imagette))))));
-        if(std::find(tailles_imagettes.begin(), tailles_imagettes.end(), nv_entree) == tailles_imagettes.end()){
+        nv_entree = max(4,min(128, static_cast<int>(pow(2,round(log2(taille_imagette))))));
+        if(find(tailles_imagettes.begin(), tailles_imagettes.end(), nv_entree) == tailles_imagettes.end()){
             tailles_imagettes.push_back(nv_entree);
         }
     }
@@ -625,17 +615,17 @@ std::vector<int> choix_taille_imagette(OCTET* ImgIn, int nH, int nW){
             //-------------------------------------------------------------------------------------
 
 // Méthode de génération de l'image mosaïque à partir des données calculées : 
-void generationImage(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size, unordered_map<string,unordered_map<string, vector<double>>> base_images) {
+void generationImage(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size, unordered_map<string,unordered_map<string, vector<double>>>& base_images) {
     int nTaille = nH * nW;
     OCTET* ImgTmp, *ImgTmp_pgm;
     allocation_tableau(ImgTmp, OCTET, DIMENSION_IMAGETTE * DIMENSION_IMAGETTE * 3);
     allocation_tableau(ImgTmp_pgm, OCTET, DIMENSION_IMAGETTE * DIMENSION_IMAGETTE);
-    std::unordered_set<std::string> uset;
-    auto start_time = std::chrono::steady_clock::now();
+    unordered_set<string> uset;
+    auto start_time = chrono::steady_clock::now();
     for (int i = 0; i < nH; i += size) {
         for (int j = 0; j < nW; j += size) {
             int distanceMin = 256;
-            std::string path = "";
+            string path;
             for (const auto& pair : base_images) {
                 if (uset.find(pair.first) == uset.end()) {
                     if (abs(pair.second.at(CRITERE)[0] - ImgIn[i * nW + j]) < distanceMin) {
@@ -670,21 +660,20 @@ void generationImage(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size, unor
 
 // Méthode de génération de l'image mosaïque à partir des données calculées : 
 //O( nH*nW*M / size^2 )
-void generationImage_ppm(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size, unordered_map<string,unordered_map<string, vector<double>>> base_images) {
+void generationImage_ppm(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size, unordered_map<string,unordered_map<string, vector<double>>>& base_images) {
     int nTaille = nH * nW;
-    int nTaille3 = nTaille * 3;
     OCTET* ImgTmp;
     // Allocation mémoire pour ImgTmp (une imagette complète)
     allocation_tableau(ImgTmp, OCTET, DIMENSION_IMAGETTE * DIMENSION_IMAGETTE * 3);
     OCTET* ImgResized ;
     allocation_tableau(ImgResized,OCTET, size * size * 3);
-    std::unordered_set<std::string> uset;
-    auto start_time = std::chrono::steady_clock::now();
+    unordered_set<string> uset;
+    auto start_time = chrono::steady_clock::now();
     // Boucles pour parcourir l'image d'entrée par blocs de 'size x size'
     for (int i = 0; i < nH; i += size) {
         for (int j = 0; j < nW; j += size) {
             int distanceMin = 256;
-            std::string path = "";
+            string path;
 
             // Trouver l'image la plus proche en couleur moyenne
             for (const auto& pair : base_images) {
@@ -784,113 +773,113 @@ int main(int argc, char* argv[])
 {
     OCTET *ImgIn, *ImgOut, *ImgIn_pgm, *ImgOut_pgm, *ImgOut2;
     int nH, nW, nTaille;
-    std::string ImageLue, ImageEcrite;
+    string ImageLue, ImageEcrite;
     bool continuer = true;
 
     unordered_map<string,unordered_map<string, vector<double>>> base_images;
     unordered_map<string,unordered_map<string, vector<double>>> base_images_pgm;
 
-    std::cout<<"Bienvenue dans cette aplication de génération d'image mosaïque"<<std::endl;
-    std::cout<<"Veuillez patienter pendant le traitement des images"<<std::endl;
-	fs::create_directories("out");
-	std::cout<<"Conversion des images : "<<std::endl;
-    auto start_time = std::chrono::steady_clock::now();
+    cout<<"Bienvenue dans cette aplication de génération d'image mosaïque"<<endl;
+    cout<<"Veuillez patienter pendant le traitement des images"<<endl;
+	filesystem::create_directories("out");
+	cout<<"Conversion des images : "<<endl;
+    auto start_time = chrono::steady_clock::now();
 	generer_base_imagettes("../base_images","out/imagettes_ppm");
-    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count();
+    auto elapsed = chrono::duration_cast<chrono::seconds>(chrono::steady_clock::now() - start_time).count();
     int minutes = elapsed / 60;
     int seconds = elapsed % 60;
-    std::cout<<"Conversion des images terminée en : "<< minutes << "m "<< seconds <<"s"<<std::endl;
+    cout<<"Conversion des images terminée en : "<< minutes << "m "<< seconds <<"s"<<endl;
     while(continuer==true){
-        std::cout<<"Veuillez sélectionner une image à convertir en mosaïque :"<<std::endl;
-        std::cin>>ImageLue;
-        while(!fs::exists(ImageLue)){
-            std::cout<<"L'image n'existe pas"<<std::endl;
-            std::cout<<"Veuillez sélectionner une image à convertir en mosaïque :"<<std::endl;
-            std::cin>>ImageLue;
+        cout<<"Veuillez sélectionner une image à convertir en mosaïque :"<<endl;
+        cin>>ImageLue;
+        while(!filesystem::exists(ImageLue)){
+            cout<<"L'image n'existe pas"<<endl;
+            cout<<"Veuillez sélectionner une image à convertir en mosaïque :"<<endl;
+            cin>>ImageLue;
         }
         ImageEcrite = ImageLue.substr(4,ImageLue.size()-8);
         lire_nb_lignes_colonnes_image_ppm(const_cast<char*>(ImageLue.c_str()), &nH, &nW);
         nTaille = nH * nW;
         allocation_tableau(ImgIn, OCTET, nTaille*3);
         lire_image_ppm(const_cast<char*>(ImageLue.c_str()), ImgIn, nH * nW);
-        std::cout<<"Calcul des tailles d'imagettes recommandées"<<std::endl;
-        std::vector<int> tailles_imagettes = choix_taille_imagette(ImgIn,nH,nW);
-        std::cout<<"Les tailles d'imagettes recommandées sont : "<<std::endl;
-        std::vector<std::string> tailles_imagettes_str = {"Imagettes hautes qualités : ","Imagettes moyennes qualités : ","Imagettes basse qualités : "};
+        cout<<"Calcul des tailles d'imagettes recommandées"<<endl;
+        vector<int> tailles_imagettes = choix_taille_imagette(ImgIn,nH,nW);
+        cout<<"Les tailles d'imagettes recommandées sont : "<<endl;
+        vector<string> tailles_imagettes_str = {"Imagettes hautes qualités : ","Imagettes moyennes qualités : ","Imagettes basse qualités : "};
         for(int i=0;i<tailles_imagettes.size();i++){
-            std::cout<<tailles_imagettes_str[i]<<tailles_imagettes[i]<<std::endl;
+            cout<<tailles_imagettes_str[i]<<tailles_imagettes[i]<<endl;
         }
-        std::cout<<"Veuillez choisir une taille d'imagette : "<<std::endl;
-        std::cin>>DIMENSION_IMAGETTE;
+        cout<<"Veuillez choisir une taille d'imagette : "<<endl;
+        cin>>DIMENSION_IMAGETTE;
 
         redimensionner_image(ImgIn, nH,nW);
         nTaille = nH * nW;
-        ecrire_image_ppm(const_cast<char*>(("./out/"+ImageEcrite+"_redim.ppm").c_str())), ImgIn, nH, nW);
+        ecrire_image_ppm(const_cast<char*>(("./out/"+ImageEcrite+"_redim.ppm").c_str()), ImgIn, nH, nW);
         allocation_tableau(ImgIn_pgm, OCTET, nTaille);
         allocation_tableau(ImgOut_pgm, OCTET, nTaille);
         allocation_tableau(ImgOut, OCTET, nTaille*3);
         allocation_tableau(ImgOut2, OCTET, nTaille*3);
         convertir_ppm_pgm(ImgIn, ImgIn_pgm, nH, nW);
-        std::cout<<"Récupération des critères des imagettes"<<std::endl;
-        std::string fichier_base_images = "out/imagettes_ppm/imagettes_"+std::to_string(DIMENSION_IMAGETTE)+"/base_images_"+std::to_string(DIMENSION_IMAGETTE)+".csv";
-        std::string fichier_base_images_ppm = "out/imagettes_ppm/imagettes_"+std::to_string(DIMENSION_IMAGETTE)+"/base_images_ppm_"+std::to_string(DIMENSION_IMAGETTE)+".csv";
+        cout<<"Récupération des critères des imagettes"<<endl;
+        string fichier_base_images = "out/imagettes_ppm/imagettes_"+to_string(DIMENSION_IMAGETTE)+"/base_images_"+to_string(DIMENSION_IMAGETTE)+".csv";
+        string fichier_base_images_ppm = "out/imagettes_ppm/imagettes_"+to_string(DIMENSION_IMAGETTE)+"/base_images_ppm_"+to_string(DIMENSION_IMAGETTE)+".csv";
 
-        if (fs::exists(fichier_base_images)) {
+        if (filesystem::exists(fichier_base_images)) {
             base_images_pgm = charger_base_images_depuis_fichier(fichier_base_images);
         } else {
             base_images_pgm = charger_base_images(fichier_base_images, DIMENSION_IMAGETTE);
             sauver_base_Image(base_images_pgm, fichier_base_images);
         }
-        if (fs::exists(fichier_base_images_ppm)) {
+        if (filesystem::exists(fichier_base_images_ppm)) {
             base_images = charger_base_images_depuis_fichier_ppm(fichier_base_images_ppm);
         } else {
             base_images = charger_base_images_ppm(fichier_base_images_ppm, DIMENSION_IMAGETTE);
             sauver_base_Image_ppm(base_images, fichier_base_images_ppm);
         }
     
-        std::cout<<"Découpe de l'image en PPM"<<std::endl;
-        std::string image_decoupe = "out/"+ImageEcrite+"_decoupe.ppm";
+        cout<<"Découpe de l'image en PPM"<<endl;
+        string image_decoupe = "out/"+ImageEcrite+"_decoupe.ppm";
         decoupe_ppm(ImgIn, ImgOut, nH, nW, DIMENSION_IMAGETTE);
         ecrire_image_ppm(const_cast<char*>(image_decoupe.c_str()), ImgOut, nH, nW);
-        std::cout<<"Découpe de l'image en PGM"<<std::endl;
+        cout<<"Découpe de l'image en PGM"<<endl;
         std:string image_decoupe_pgm = "out/"+ImageEcrite+"_decoupe.pgm";
         decoupe(ImgIn_pgm, ImgOut_pgm, nH, nW, DIMENSION_IMAGETTE);
         ecrire_image_pgm(const_cast<char*>(image_decoupe_pgm.c_str()), ImgOut_pgm, nH, nW);
         
-        std::cout<<"Génération de l'image PGM"<<std::endl;
-        start_time = std::chrono::steady_clock::now();
+        cout<<"Génération de l'image PGM"<<endl;
+        start_time = chrono::steady_clock::now();
         generationImage(ImgOut_pgm, ImgOut_pgm, nH, nW, DIMENSION_IMAGETTE, base_images_pgm);
-        std::string image_mosaique_pgm = "out/"+ImageEcrite+"_mosaique.pgm";
+        string image_mosaique_pgm = "out/"+ImageEcrite+"_mosaique.pgm";
         ecrire_image_pgm(const_cast<char*>(image_mosaique_pgm.c_str()), ImgOut_pgm, nH, nW);
-        elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count();
+        elapsed = chrono::duration_cast<chrono::seconds>(chrono::steady_clock::now() - start_time).count();
         minutes = elapsed / 60;
         seconds = elapsed % 60;
-        std::cout<<"Mosaique PGM générée en : "<< minutes << "m "<< seconds <<"s"<<std::endl;
-        std::cout<<"Génération de l'image PPM"<<std::endl;
-        start_time = std::chrono::steady_clock::now();
-        std::string image_mosaique_ppm = "out/"+ImageEcrite+"_mosaique.ppm";
+        cout<<"Mosaique PGM générée en : "<< minutes << "m "<< seconds <<"s"<<endl;
+        cout<<"Génération de l'image PPM"<<endl;
+        start_time = chrono::steady_clock::now();
+        string image_mosaique_ppm = "out/"+ImageEcrite+"_mosaique.ppm";
         generationImage_ppm(ImgOut, ImgOut2, nH, nW, DIMENSION_IMAGETTE, base_images);
         ecrire_image_ppm(const_cast<char*>(image_mosaique_ppm.c_str()), ImgOut2, nH, nW);
-        elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count();
+        elapsed = chrono::duration_cast<chrono::seconds>(chrono::steady_clock::now() - start_time).count();
         minutes = elapsed / 60;
         seconds = elapsed % 60;
-        std::cout<<"Mosaique PPM générée en : "<< minutes << "m "<< seconds <<"s"<<std::endl;
+        cout<<"Mosaique PPM générée en : "<< minutes << "m "<< seconds <<"s"<<endl;
 
-        std::cout<<"Calcul de la qualité de l'image PGM"<<std::endl;
+        cout<<"Calcul de la qualité de l'image PGM"<<endl;
         double eqm_pgm = EQM_pgm(ImgIn_pgm, ImgOut_pgm, nH, nW);
         double psnr_pgm = PSNR_pgm(ImgIn_pgm, ImgOut_pgm, nH, nW);
-        std::cout<<"EQM : "<<eqm_pgm<<std::endl;
-        std::cout<<"PSNR : "<<psnr_pgm<<std::endl;
+        cout<<"EQM : "<<eqm_pgm<<endl;
+        cout<<"PSNR : "<<psnr_pgm<<endl;
 
-        std::cout<<"Calcul de la qualité de l'image PPM"<<std::endl;
+        cout<<"Calcul de la qualité de l'image PPM"<<endl;
         double eqm_ppm = EQM_ppm(ImgIn, ImgOut2, nH, nW);
         double psnr_ppm = PSNR_ppm(ImgIn, ImgOut2, nH, nW);
-        std::cout<<"EQM : "<<eqm_ppm<<std::endl;
-        std::cout<<"PSNR : "<<psnr_ppm<<std::endl;
+        cout<<"EQM : "<<eqm_ppm<<endl;
+        cout<<"PSNR : "<<psnr_ppm<<endl;
 
-        std::cout<<"Voulez-vous continuer ? [O/n]"<<std::endl;
-        std::string reponse;
-        std::cin>>reponse;
+        cout<<"Voulez-vous continuer ? [O/n]"<<endl;
+        string reponse;
+        cin>>reponse;
         if(reponse=="n" || reponse=="N" || reponse=="non" || reponse=="Non"){
             continuer = false;
         }
