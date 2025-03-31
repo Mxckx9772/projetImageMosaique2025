@@ -38,7 +38,7 @@ using namespace std;
 // Paramètres globaux
 int DIMENSION_IMAGETTE;
 int TAILLE_BASE = 141988;
-string CRITERE = "moyenne"; // Critère par défaut
+const string CRITERE = "moyenne"; // Critère par défaut
 
 
 //-------------------------------------------------------------------------------------------------------------
@@ -60,8 +60,8 @@ void afficherProgression(int current, int total, chrono::steady_clock::time_poin
     int remaining = (current > 0) ? ((elapsed * (total - current)) / current) : 0;
     int minutes = remaining / 60;
     int seconds = remaining % 60;
-    if(seconds < 10) cout << " Temps restant estimé : " << minutes << "m 0" << seconds << "s\r";
-    else cout << " Temps restant estimé : " << minutes << "m " << seconds << "s\r";
+    if (seconds < 10) cout << "  - Temps restant estimé : " << minutes << "m 0" << seconds << "s\r";
+    else cout << " - Temps restant estimé : " << minutes << "m " << seconds << "s\r";
     cout.flush();
 }
 
@@ -93,20 +93,18 @@ void convertir_ppm_pgm(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW) {
 // ------------------------------------ Pré-traitement de la base d'images ------------------------------------
 //-------------------------------------------------------------------------------------------------------------
 
-void redimensionner_image(OCTET*& ImgIn, int& nH, int& nW) {
-    int newH = ceil(nH / DIMENSION_IMAGETTE) * DIMENSION_IMAGETTE;
-    int newW = ceil(nW / DIMENSION_IMAGETTE) * DIMENSION_IMAGETTE;
-    if (newH == nH && newW == nW) {
-        cout << "L'image est déjà un multiple de " << DIMENSION_IMAGETTE << "." << endl;
+void redimensionner_image(OCTET*& ImgIn, int& nH, int& nW, int taille_imagette) {
+    int newH = ceil(nH / taille_imagette) * taille_imagette;
+    int newW = ceil(nW / taille_imagette) * taille_imagette;
+    if (newH == nH && newW == nW)
         return;
-    }
-    cout << "Redimensionnement de l'image pour être un multiple de " << DIMENSION_IMAGETTE << "." << endl;
+    cout << "Redimensionnement de l'image pour être un multiple de " << taille_imagette << "." << endl;
     cout << "Dimensions originales : " << nH << "x" << nW << ", nouvelles dimensions : " << newH << "x" << newW << "." << endl;
     OCTET* ImgResized;
     allocation_tableau(ImgResized, OCTET, newH * newW * 3);
     for (int i = 0; i < newH; i++) {
         for (int j = 0; j < newW; j++) {
-            ImgResized[(i * newW + j) * 3] = ImgIn[(i * nW + j) * 3];       // Rouge
+            ImgResized[(i * newW + j) * 3] = ImgIn[(i * nW + j) * 3];         // Rouge
             ImgResized[(i * newW + j) * 3 + 1] = ImgIn[(i * nW + j) * 3 + 1]; // Vert
             ImgResized[(i * newW + j) * 3 + 2] = ImgIn[(i * nW + j) * 3 + 2]; // Bleu
         }
@@ -161,7 +159,7 @@ void sauver_base_Image(const unordered_map<string, unordered_map<string, vector<
 }
 
 // Méthode pour charger les données enregistrées précédemment : 
-unordered_map<string, unordered_map<string, vector<double>>> charger_base_images_depuis_fichier(const string& fichier) {
+unordered_map<string, unordered_map<string, vector<double>>> charger_base_images_pgm_depuis_fichier(const string& fichier) {
     unordered_map<string, unordered_map<string, vector<double>>> base_images;
     ifstream in(fichier);
 
@@ -199,7 +197,7 @@ unordered_map<string, unordered_map<string, vector<double>>> charger_base_images
 }
 
 // Méthode pour découper l'image en blocs de taille choisie : 
-void decoupe(OCTET*Imgin,OCTET*ImgOut,int nH,int nW,int size){
+void decoupe_pgm(OCTET*Imgin,OCTET*ImgOut,int nH,int nW,int size){
 	if(nH%size!=0 || nW%size!=0){
 		cout << "Erreur : les dimensions de l'image ne sont paun multiple des dimensions de la mosaique" << endl;
 		return;
@@ -248,7 +246,7 @@ unordered_map<string, vector<double>> calculer_criteres_pgm(OCTET* ImgIn, int nH
 }
 
 // Fonction pour calculer la base d'images et stocker leurs moyennes : 
-unordered_map<string,unordered_map<string, vector<double>>> charger_base_images(const string& dossier, int size) {
+unordered_map<string,unordered_map<string, vector<double>>> charger_base_images_pgm(const string& dossier, int size) {
     unordered_map<string,unordered_map<string, vector<double>>>base_images;
     vector<filesystem::directory_entry> fichiers;
 
@@ -284,10 +282,10 @@ unordered_map<string,unordered_map<string, vector<double>>> charger_base_images(
             lire_image_ppm(const_cast<char*>(chemin.c_str()), ImgTmp, size * size);
             double moyenne;
             vector<double> histogramme;
-            auto critere = calculer_criteres_pgm(ImgTmp, size, size, moyenne, histogramme);
 
             // Protéger l'accès à `base_images` avec un mutex
             {
+                auto critere = calculer_criteres_pgm(ImgTmp, size, size, moyenne, histogramme);
                 lock_guard<mutex> lock(mtx);
                 base_images[chemin] = critere;
             }
@@ -378,7 +376,7 @@ void sauver_base_Image_ppm(const unordered_map<string, unordered_map<string, vec
 //Méthode pour charger les données enregistrées précédemment : 
 //O(N log N)
 //N = taille de base_images
-unordered_map<string, unordered_map<string, vector<double>>> charger_base_images_depuis_fichier_ppm(const string& fichier) {
+unordered_map<string, unordered_map<string, vector<double>>> charger_base_images_ppm_depuis_fichier(const string& fichier) {
     unordered_map<string, unordered_map<string, vector<double>>> base_images;
     ifstream in(fichier);
 
@@ -572,7 +570,7 @@ void convertir(const string& source_folder, const string& ppm_folder, int size) 
 
 void generer_base_imagettes(const string& dossier_source, const string& dossier_destination) {
     if(!filesystem::exists(dossier_source)){
-        cout<<"Le dossier source n'existe pas."<<endl;
+        cout << "Le dossier " << dossier_source << " n'existe pas." << endl;
         return;
     }
     for(int i=2; i<=7 ;i++){
@@ -584,7 +582,7 @@ void generer_base_imagettes(const string& dossier_source, const string& dossier_
             filesystem::create_directories(dossier_sortie);
             string fichier_base_images = dossier_sortie + "/base_images_" + to_string(taille_imagette)+".csv";
             string fichier_base_images_ppm = dossier_sortie + "/base_images_ppm_" + to_string(taille_imagette)+".csv";
-            auto base_images = charger_base_images(dossier_sortie , taille_imagette);
+            auto base_images = charger_base_images_pgm(dossier_sortie , taille_imagette);
             sauver_base_Image(base_images, fichier_base_images);
             auto base_images_ppm = charger_base_images_ppm(dossier_sortie, taille_imagette);
             sauver_base_Image_ppm(base_images_ppm, fichier_base_images_ppm);
@@ -592,9 +590,9 @@ void generer_base_imagettes(const string& dossier_source, const string& dossier_
     }
 }
 
-vector<int> choix_taille_imagette(OCTET* ImgIn, int nH, int nW){
+vector<int> choix_taille_imagette(int nW) {
     vector<int> tailles_imagettes;
-    vector<int> tailles = {20,40,80};
+    vector tailles = {20,40,80};
     int nv_entree;
     for(int blocs : tailles){
         int taille_imagette = nW/blocs;
@@ -769,123 +767,128 @@ double PSNR_ppm(OCTET* img1, OCTET* img2, int nH, int nW) {
 
 
 // Main pour effectuer toutes les étapes de génération de l'image mosaïque :
-int main(int argc, char* argv[])
+int main()
 {
-    OCTET *ImgIn, *ImgOut, *ImgIn_pgm, *ImgOut_pgm, *ImgOut2;
+    OCTET *ImgIn_ppm, *ImgOut_ppm, *ImgIn_pgm, *ImgOut_pgm, *ImgOut2;
+    string ImgInName, ImgOutName;
     int nH, nW, nTaille;
-    string ImageLue, ImageEcrite;
     bool continuer = true;
-
-    unordered_map<string,unordered_map<string, vector<double>>> base_images;
+    unordered_map<string,unordered_map<string, vector<double>>> base_images_ppm;
     unordered_map<string,unordered_map<string, vector<double>>> base_images_pgm;
 
-    cout<<"Bienvenue dans cette aplication de génération d'image mosaïque"<<endl;
-    cout<<"Veuillez patienter pendant le traitement des images"<<endl;
+    cout << "Bienvenue dans cette aplication de génération d'images mosaïque" << endl;
 	filesystem::create_directories("out");
-	cout<<"Conversion des images : "<<endl;
+	cout << "Chargement de la base d'images... " << endl;
     auto start_time = chrono::steady_clock::now();
-	generer_base_imagettes("../base_images","out/imagettes_ppm");
+	generer_base_imagettes("in/base_images","out/imagettes_ppm");
     auto elapsed = chrono::duration_cast<chrono::seconds>(chrono::steady_clock::now() - start_time).count();
-    int minutes = elapsed / 60;
-    int seconds = elapsed % 60;
-    cout<<"Conversion des images terminée en : "<< minutes << "m "<< seconds <<"s"<<endl;
-    while(continuer==true){
-        cout<<"Veuillez sélectionner une image à convertir en mosaïque :"<<endl;
-        cin>>ImageLue;
-        while(!filesystem::exists(ImageLue)){
-            cout<<"L'image n'existe pas"<<endl;
-            cout<<"Veuillez sélectionner une image à convertir en mosaïque :"<<endl;
-            cin>>ImageLue;
-        }
-        ImageEcrite = ImageLue.substr(4,ImageLue.size()-8);
-        lire_nb_lignes_colonnes_image_ppm(const_cast<char*>(ImageLue.c_str()), &nH, &nW);
-        nTaille = nH * nW;
-        allocation_tableau(ImgIn, OCTET, nTaille*3);
-        lire_image_ppm(const_cast<char*>(ImageLue.c_str()), ImgIn, nH * nW);
-        cout<<"Calcul des tailles d'imagettes recommandées"<<endl;
-        vector<int> tailles_imagettes = choix_taille_imagette(ImgIn,nH,nW);
-        cout<<"Les tailles d'imagettes recommandées sont : "<<endl;
-        vector<string> tailles_imagettes_str = {"Imagettes hautes qualités : ","Imagettes moyennes qualités : ","Imagettes basse qualités : "};
-        for(int i=0;i<tailles_imagettes.size();i++){
-            cout<<tailles_imagettes_str[i]<<tailles_imagettes[i]<<endl;
-        }
-        cout<<"Veuillez choisir une taille d'imagette : "<<endl;
-        cin>>DIMENSION_IMAGETTE;
+    int minutes = static_cast<int>(elapsed / 60);
+    int seconds = static_cast<int>(elapsed % 60);
+    cout << "Chargement de la base terminé en : " << minutes << "m " << seconds << "s" << endl;
 
-        redimensionner_image(ImgIn, nH,nW);
+    while (continuer) {
+        do {
+            cout << "Veuillez donner une image (PPM) à transformer en mosaïque :" << endl;
+            cin >> ImgInName;
+            if (filesystem::exists("./in/"+ImgInName))
+                break;
+            cout << "L'image n'existe pas." << endl;
+        } while (true);
+        ImgOutName = ImgInName.substr(0,ImgInName.size()-4);
+        cout << "DEBUG ImageEcrite = " << ImgOutName << endl;
+        lire_nb_lignes_colonnes_image_ppm(const_cast<char*>(ImgInName.c_str()), &nH, &nW);
         nTaille = nH * nW;
-        ecrire_image_ppm(const_cast<char*>(("./out/"+ImageEcrite+"_redim.ppm").c_str()), ImgIn, nH, nW);
+        allocation_tableau(ImgIn_ppm, OCTET, nTaille*3);
+        lire_image_ppm(const_cast<char*>(ImgInName.c_str()), ImgIn_ppm, nTaille);
+
+        vector tailles_imagettes{4, 8, 16, 32, 64, 128};
+        vector<int> tailles_imagettes_reco = choix_taille_imagette(nW);
+        cout << "Tailles d'imagettes recommandées : " << endl;
+        vector<string> tailles_imagettes_str = {" - hautes qualité : "," - moyennes qualité : "," - basse qualité : "};
+        for (int i=0; i < tailles_imagettes_reco.size(); i++)
+            cout << tailles_imagettes_str[i] << tailles_imagettes_reco[i] << endl;
+        cout << "Autre tailles possible : ";
+        for (int taille_imagettes : tailles_imagettes) {
+            if (find(tailles_imagettes_reco.begin(), tailles_imagettes_reco.end(), taille_imagettes) == tailles_imagettes_reco.end())
+                cout << taille_imagettes << " " << endl;
+        }
+        cout << "Veuillez choisir une taille d'imagette : " << endl;
+        cin >> DIMENSION_IMAGETTE;
+
+        redimensionner_image(ImgIn_ppm, nH,nW, DIMENSION_IMAGETTE);
+        nTaille = nH * nW;
+        ecrire_image_ppm(const_cast<char*>(("./out/"+ImgOutName+"_redim.ppm").c_str()), ImgIn_ppm, nH, nW);
         allocation_tableau(ImgIn_pgm, OCTET, nTaille);
         allocation_tableau(ImgOut_pgm, OCTET, nTaille);
-        allocation_tableau(ImgOut, OCTET, nTaille*3);
+        allocation_tableau(ImgOut_ppm, OCTET, nTaille*3);
         allocation_tableau(ImgOut2, OCTET, nTaille*3);
-        convertir_ppm_pgm(ImgIn, ImgIn_pgm, nH, nW);
-        cout<<"Récupération des critères des imagettes"<<endl;
-        string fichier_base_images = "out/imagettes_ppm/imagettes_"+to_string(DIMENSION_IMAGETTE)+"/base_images_"+to_string(DIMENSION_IMAGETTE)+".csv";
+        convertir_ppm_pgm(ImgIn_ppm, ImgIn_pgm, nH, nW);
+        cout << "Récupération des critères des imagettes" << endl;
+        string fichier_base_images_pgm = "out/imagettes_ppm/imagettes_"+to_string(DIMENSION_IMAGETTE)+"/base_images_"+to_string(DIMENSION_IMAGETTE)+".csv";
         string fichier_base_images_ppm = "out/imagettes_ppm/imagettes_"+to_string(DIMENSION_IMAGETTE)+"/base_images_ppm_"+to_string(DIMENSION_IMAGETTE)+".csv";
 
-        if (filesystem::exists(fichier_base_images)) {
-            base_images_pgm = charger_base_images_depuis_fichier(fichier_base_images);
-        } else {
-            base_images_pgm = charger_base_images(fichier_base_images, DIMENSION_IMAGETTE);
-            sauver_base_Image(base_images_pgm, fichier_base_images);
-        }
-        if (filesystem::exists(fichier_base_images_ppm)) {
-            base_images = charger_base_images_depuis_fichier_ppm(fichier_base_images_ppm);
-        } else {
-            base_images = charger_base_images_ppm(fichier_base_images_ppm, DIMENSION_IMAGETTE);
-            sauver_base_Image_ppm(base_images, fichier_base_images_ppm);
-        }
-    
-        cout<<"Découpe de l'image en PPM"<<endl;
-        string image_decoupe = "out/"+ImageEcrite+"_decoupe.ppm";
-        decoupe_ppm(ImgIn, ImgOut, nH, nW, DIMENSION_IMAGETTE);
-        ecrire_image_ppm(const_cast<char*>(image_decoupe.c_str()), ImgOut, nH, nW);
-        cout<<"Découpe de l'image en PGM"<<endl;
-        std:string image_decoupe_pgm = "out/"+ImageEcrite+"_decoupe.pgm";
-        decoupe(ImgIn_pgm, ImgOut_pgm, nH, nW, DIMENSION_IMAGETTE);
+        if (filesystem::exists(fichier_base_images_pgm))
+            base_images_pgm = charger_base_images_pgm_depuis_fichier(fichier_base_images_pgm);
+        else
+            base_images_pgm = charger_base_images_pgm(fichier_base_images_pgm, DIMENSION_IMAGETTE);
+
+        if (filesystem::exists(fichier_base_images_ppm))
+            base_images_ppm = charger_base_images_ppm_depuis_fichier(fichier_base_images_ppm);
+        else
+            base_images_ppm = charger_base_images_ppm(fichier_base_images_ppm, DIMENSION_IMAGETTE);
+
+        cout << "Découpe de l'image en grille (PPM)" << endl;
+        string image_decoupe = "out/"+ImgOutName+"_decoupe.ppm";
+        decoupe_ppm(ImgIn_ppm, ImgOut_ppm, nH, nW, DIMENSION_IMAGETTE);
+        ecrire_image_ppm(const_cast<char*>(image_decoupe.c_str()), ImgOut_ppm, nH, nW);
+        cout << "Découpe de l'image en grille (PGM)" << endl;
+        std:string image_decoupe_pgm = "out/"+ImgOutName+"_decoupe.pgm";
+        decoupe_pgm(ImgIn_pgm, ImgOut_pgm, nH, nW, DIMENSION_IMAGETTE);
         ecrire_image_pgm(const_cast<char*>(image_decoupe_pgm.c_str()), ImgOut_pgm, nH, nW);
-        
-        cout<<"Génération de l'image PGM"<<endl;
+
+        cout << "Génération de l'image mosaîque (PGM)" << endl;
         start_time = chrono::steady_clock::now();
         generationImage(ImgOut_pgm, ImgOut_pgm, nH, nW, DIMENSION_IMAGETTE, base_images_pgm);
-        string image_mosaique_pgm = "out/"+ImageEcrite+"_mosaique.pgm";
+        string image_mosaique_pgm = "out/"+ImgOutName+"_mosaique.pgm";
         ecrire_image_pgm(const_cast<char*>(image_mosaique_pgm.c_str()), ImgOut_pgm, nH, nW);
         elapsed = chrono::duration_cast<chrono::seconds>(chrono::steady_clock::now() - start_time).count();
-        minutes = elapsed / 60;
-        seconds = elapsed % 60;
-        cout<<"Mosaique PGM générée en : "<< minutes << "m "<< seconds <<"s"<<endl;
-        cout<<"Génération de l'image PPM"<<endl;
+        minutes = static_cast<int>(elapsed / 60);
+        seconds = static_cast<int>(elapsed % 60);
+        cout << "Mosaique PGM générée en : " << minutes << "m " << seconds << "s" << endl;
+        cout << "Génération de l'image mosaîque (PGM)" << endl;
         start_time = chrono::steady_clock::now();
-        string image_mosaique_ppm = "out/"+ImageEcrite+"_mosaique.ppm";
-        generationImage_ppm(ImgOut, ImgOut2, nH, nW, DIMENSION_IMAGETTE, base_images);
+        string image_mosaique_ppm = "out/"+ImgOutName+"_mosaique.ppm";
+        generationImage_ppm(ImgOut_ppm, ImgOut2, nH, nW, DIMENSION_IMAGETTE, base_images_ppm);
         ecrire_image_ppm(const_cast<char*>(image_mosaique_ppm.c_str()), ImgOut2, nH, nW);
         elapsed = chrono::duration_cast<chrono::seconds>(chrono::steady_clock::now() - start_time).count();
-        minutes = elapsed / 60;
-        seconds = elapsed % 60;
-        cout<<"Mosaique PPM générée en : "<< minutes << "m "<< seconds <<"s"<<endl;
+        minutes = static_cast<int>(elapsed / 60);
+        seconds = static_cast<int>(elapsed % 60);
+        cout << "Mosaique PPM générée en : "<< minutes << "m " << seconds << "s" << endl;
 
-        cout<<"Calcul de la qualité de l'image PGM"<<endl;
+        cout << "Calcul de la qualité de l'image (PGM)" << endl;
         double eqm_pgm = EQM_pgm(ImgIn_pgm, ImgOut_pgm, nH, nW);
         double psnr_pgm = PSNR_pgm(ImgIn_pgm, ImgOut_pgm, nH, nW);
-        cout<<"EQM : "<<eqm_pgm<<endl;
-        cout<<"PSNR : "<<psnr_pgm<<endl;
+        cout << "EQM : " << eqm_pgm << endl;
+        cout << "PSNR : " << psnr_pgm << endl;
 
-        cout<<"Calcul de la qualité de l'image PPM"<<endl;
-        double eqm_ppm = EQM_ppm(ImgIn, ImgOut2, nH, nW);
-        double psnr_ppm = PSNR_ppm(ImgIn, ImgOut2, nH, nW);
-        cout<<"EQM : "<<eqm_ppm<<endl;
-        cout<<"PSNR : "<<psnr_ppm<<endl;
+        cout << "Calcul de la qualité de l'image (PPM)" << endl;
+        double eqm_ppm = EQM_ppm(ImgIn_ppm, ImgOut2, nH, nW);
+        double psnr_ppm = PSNR_ppm(ImgIn_ppm, ImgOut2, nH, nW);
+        cout << "EQM : " << eqm_ppm << endl;
+        cout << "PSNR : " << psnr_ppm << endl;
 
-        cout<<"Voulez-vous continuer ? [O/n]"<<endl;
-        string reponse;
-        cin>>reponse;
-        if(reponse=="n" || reponse=="N" || reponse=="non" || reponse=="Non"){
+        cout << "Voulez-vous continuer ? [O/n]" << endl;
+        string reponse = "o";
+        cin >> reponse;
+        if (reponse=="n" || reponse=="N" || reponse=="non" || reponse=="Non")
             continuer = false;
-        }
     }
-	free(ImgIn);
-	free(ImgOut);
+
+    free(ImgIn_ppm);
+    free(ImgOut_ppm);
+    free(ImgIn_pgm);
+    free(ImgOut_pgm);
+    free(ImgOut2);
 
 	return 0;
 }
