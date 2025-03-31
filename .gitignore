@@ -1,3 +1,8 @@
+# Ignore files without extension
+*
+!*.*
+!*/
+
 # Ignorer les dossiers obj, bin et img
 obj/
 bin/
@@ -15,7 +20,4 @@ img/
 in/
 out/
 base_images.txt
-mosaique
-/base_images
 TP_Mosaique/base_images_ppm.txt
-TP_Mosaique/mosaique_ppm
