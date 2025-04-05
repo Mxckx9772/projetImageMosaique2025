@@ -1,24 +1,22 @@
-// Première version de l'implémentation du TP Image
+// Projet Image Mosaïque
+//
 // MacOS : brew install opencv
 //     g++ base_code_mosaique.cpp -o base_code_mosaique $(pkg-config --cflags --libs opencv4) -std=c++17
 //     ./base_code_mosaique
+//
 // Linux : sudo apt update
 //     sudo apt upgrade
 //     sudo apt install libopencv-dev
 //     sudo apt install nlohmann-json3-dev
 //     g++ base_code_mosaique.cpp -o mosaique $(pkg-config --cflags --libs opencv4) -std=c++17 -ljpeg -pthread
 //     ./base_code_mosaique
-// Les résultats sont disponibles dans le dossier ImageTP :
-//     Image_mosaique.pgm : Image découpée en bloc
-//     Image_best.pgm : Image mosaïque avec compression des imagettes
-//     Image_HD.pgm : Image haute qualité avec imagettes sans compression
 
+// Liens :
 // Lien vers la banque d'image : https://drive.google.com/drive/folders/1qA-8ZMroFYy72y2pfmN4nWWo_82tpCod?usp=sharing
-// lien pour le csv.h : https://github.com/ben-strasser/fast-cpp-csv-parser/blob/master/csv.h
+// Lien pour le csv.h : https://github.com/ben-strasser/fast-cpp-csv-parser/blob/master/csv.h
 // Lien vers la banque prête à l'emploi : https://filesender.renater.fr/?s=download&token=300ef385-64e3-481a-9cf5-e1baf1fc9430
 
 #include <cstdio>
-#include "image_ppm.h"
 #include <iostream>
 #include <cmath>
 #include <filesystem>
@@ -26,17 +24,18 @@
 #include <fstream>
 #include <map>
 #include <sstream>
-#include <opencv2/opencv.hpp>
 #include <unordered_set>
-#include "../src/csv.h"
 #include <chrono>
 #include <thread>
 #include <vector>
 
+#include <opencv2/opencv.hpp>
+#include "../src/csv.h"
+#include "image_ppm.h"
+
 using namespace std;
 
 int TAILLE_BASE = 141988;
-const string CRITERE = "moyenne"; // Critère par défaut
 
 
 //-------------------------------------------------------------------------------------------------------------
@@ -65,17 +64,15 @@ void afficherProgression(int current, int total, chrono::steady_clock::time_poin
 
 // Fonction pour convertir une image JPEG en PPM
 void convertir_jpg_en_ppm(const string& chemin_jpg, const string& chemin_ppm,int size) {
-    cv::Mat img = cv::imread(chemin_jpg, cv::IMREAD_COLOR);
+    cv::Mat img = imread(chemin_jpg, cv::IMREAD_COLOR);
     if (img.empty()) {
         cerr << "Erreur : Impossible de lire l'image " << chemin_jpg << endl;
         return;
     }
     cv::Mat img_resized;
-    cv::resize(img,img_resized,cv::Size(size,size));
-    if (!cv::imwrite(chemin_ppm, img_resized)) {
+    resize(img,img_resized,cv::Size(size,size));
+    if (!imwrite(chemin_ppm, img_resized))
         cerr << "Erreur : Impossible d'écrire l'image " << chemin_ppm << endl;
-        return;
-    }
 }
 
 // Fonction pour convertir une image PPM en PGM
@@ -98,13 +95,12 @@ void redimensionner_image(OCTET*& ImgIn, int& nH, int& nW, int taille_imagette) 
     cout << "Dimensions originales : " << nH << "x" << nW << ", nouvelles dimensions : " << newH << "x" << newW << "." << endl;
     OCTET* ImgResized;
     allocation_tableau(ImgResized, OCTET, newH * newW * 3);
-    for (int i = 0; i < newH; i++) {
+    for (int i = 0; i < newH; i++)
         for (int j = 0; j < newW; j++) {
             ImgResized[(i * newW + j) * 3] = ImgIn[(i * nW + j) * 3];         // Rouge
             ImgResized[(i * newW + j) * 3 + 1] = ImgIn[(i * nW + j) * 3 + 1]; // Vert
             ImgResized[(i * newW + j) * 3 + 2] = ImgIn[(i * nW + j) * 3 + 2]; // Bleu
         }
-    }
     free(ImgIn);
     ImgIn = ImgResized;
     nH = newH;
@@ -198,30 +194,25 @@ unordered_map<string, unordered_map<string, vector<double>>> charger_base_images
 }
 
 // Méthode pour découper l'image en blocs de taille choisie : 
-void decoupe_pgm(OCTET*Imgin,OCTET*ImgOut,int nH,int nW,int size){
-	if(nH%size!=0 || nW%size!=0){
+void decoupe_pgm(OCTET* Imgin, OCTET* ImgOut, int nH, int nW, int size) {
+	if (nH%size!=0 || nW%size!=0) {
 		cout << "Erreur : les dimensions de l'image ne sont paun multiple des dimensions de la mosaique" << endl;
 		return;
 	}
-	for (int i=0; i < nH; i+=size){
-		for (int j=0; j < nW; j+=size){
+	for (int i=0; i < nH; i+=size)
+		for (int j=0; j < nW; j+=size) {
 			int moyenne = 0;
-			for (int k=0; k < size; k++){
-				for (int l=0; l < size; l++){
+			for (int k=0; k < size; k++)
+				for (int l=0; l < size; l++)
 					moyenne += Imgin[(i+k)*nW+j+l];
-				}
-			}
 			moyenne /= size*size;
-			for (int k=0; k < size; k++){
-				for (int l=0; l < size; l++){
+			for (int k=0; k < size; k++)
+				for (int l=0; l < size; l++)
 					ImgOut[(i+k)*nW+j+l] = moyenne;
-				}
-			}
 		}
-	}
 }
 
-// //Calcul du critère moyenneur :
+// Calcul du critère moyenneur :
 // int critere_img_mean_pgm(OCTET* ImgIn,int nH,int nW){
 // 	int moy = 0;
 // 	int nTaille = nH*nW;
@@ -374,9 +365,9 @@ void sauver_base_Image_ppm(const unordered_map<string, unordered_map<string, vec
 
     cout << "Données sauvegardées dans le fichier : " << fichier << endl;
 }
-//Méthode pour charger les données enregistrées précédemment : 
-//O(N log N)
-//N = taille de base_images
+// Méthode pour charger les données enregistrées précédemment :
+// O(N log N)
+// N = taille de base_images
 unordered_map<string, unordered_map<string, vector<double>>> charger_base_images_ppm_depuis_fichier(const string& fichier) {
     unordered_map<string, unordered_map<string, vector<double>>> base_images;
     ifstream in(fichier);
@@ -438,33 +429,30 @@ unordered_map<string, unordered_map<string, vector<double>>> charger_base_images
 }
 
 void decoupe_ppm(OCTET* Imgin, OCTET* ImgOut, int nH, int nW, int size){
-	if(nH%size!=0 || nW%size!=0){
+	if(nH%size!=0 || nW%size!=0) {
 		cout << "Erreur : les dimensions de l'image ne sont pas un multiple des dimensions de la mosaique" << endl;
 		return;
 	}
-	for (int i=0; i < nH; i+=size){
-        for(int j=0;j<nW*3;j+=size*3){
+	for (int i=0; i < nH; i+=size)
+        for (int j=0; j<nW*3; j+=size*3) {
 			int moyenneR = 0; int moyenneG = 0; int moyenneB = 0;
-			for (int k=0; k < size; k++){
-				for (int l=0; l < size*3; l+=3){
+			for (int k=0; k < size; k++)
+				for (int l=0; l < size*3; l+=3) {
 					moyenneR += Imgin[(i+k)*nW*3+j+l];
                     moyenneG += Imgin[(i+k)*nW*3+j+l+1];
                     moyenneB += Imgin[(i+k)*nW*3+j+l+2];
 				}
-			}
 			moyenneR /= size*size; moyenneG /= size*size; moyenneB/= size*size;
-			for (int k=0; k < size; k++){
-				for (int l=0; l < size*3; l+=3){
+			for (int k=0; k < size; k++)
+				for (int l=0; l < size*3; l+=3) {
 					ImgOut[(i+k)*nW*3+j+l] = moyenneR;
                     ImgOut[(i+k)*nW*3+j+l+1] = moyenneG;
                     ImgOut[(i+k)*nW*3+j+l+2] = moyenneB;
 				}
-			}
 		}
-    }
 }
 
-//Calcul du critère moyenneur :
+// Calcul du critère moyenneur :
 // O(nH*nW)
 // vector<double> critere_img_mean_ppm(OCTET* ImgIn,int nH,int nW){
 // 	double moyR = 0; double moyG =0; double moyB = 0;
@@ -478,9 +466,9 @@ void decoupe_ppm(OCTET* Imgin, OCTET* ImgOut, int nH, int nW, int size){
 // 	return {moyR/nTaille,moyG/nTaille,moyB/nTaille};
 // }
 
-//Calcul du critère moyenneur :
+// Calcul du critère moyenneur :
 // O(nH*nW)
-unordered_map<string,vector<double>> critere_img_mean_ppm(OCTET* ImgIn,int nH,int nW){
+unordered_map<string, vector<double>> critere_img_mean_ppm(OCTET* ImgIn, int nH, int nW) {
 	vector moyenne = {0.0, 0.0, 0.0};
     vector<double> hist_R;
     vector<double> hist_G;
@@ -490,7 +478,7 @@ unordered_map<string,vector<double>> critere_img_mean_ppm(OCTET* ImgIn,int nH,in
     hist_B.assign(256,0.0);
 	int nTaille = nH*nW;
     int nTaille3 = nTaille*3;
-	for(int i=0;i<nTaille3;i+=3){
+	for (int i=0; i < nTaille3; i+=3) {
         int R = ImgIn[i];
         int G = ImgIn[i+1];
         int B = ImgIn[i+2];
@@ -617,7 +605,8 @@ vector<int> choix_taille_imagette(int nW) {
             //-------------------------------------------------------------------------------------
 
 // Méthode de génération de l'image mosaïque à partir des données calculées : 
-void generationImage(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size, unordered_map<string,unordered_map<string, vector<double>>>& base_images, int taille_imagette) {
+void generationImage_pgm(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size, const string& critere,
+    unordered_map<string,unordered_map<string, vector<double>>>& base_images, int taille_imagette) {
     int nTaille = nH * nW;
     OCTET* ImgTmp, *ImgTmp_pgm;
     allocation_tableau(ImgTmp, OCTET, taille_imagette * taille_imagette * 3);
@@ -630,8 +619,8 @@ void generationImage(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size, unor
             string path;
             for (const auto& pair : base_images) {
                 if (uset.find(pair.first) == uset.end()) {
-                    if (abs(pair.second.at(CRITERE)[0] - ImgIn[i * nW + j]) < distanceMin) {
-                        distanceMin = abs(pair.second.at(CRITERE)[0] - ImgIn[i * nW + j]);
+                    if (abs(pair.second.at(critere)[0] - ImgIn[i * nW + j]) < distanceMin) {
+                        distanceMin = abs(pair.second.at(critere)[0] - ImgIn[i * nW + j]);
                         path = pair.first;
                     }
                     if (distanceMin == 0) {
@@ -664,7 +653,8 @@ void generationImage(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size, unor
 
 // Méthode de génération de l'image mosaïque à partir des données calculées : 
 //O( nH*nW*M / size^2 )
-void generationImage_ppm(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size, unordered_map<string,unordered_map<string, vector<double>>>& base_images, int taille_imagette) {
+void generationImage_ppm(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size, const string& critere,
+    unordered_map<string,unordered_map<string, vector<double>>>& base_images, int taille_imagette) {
     int nTaille = nH * nW;
     OCTET* ImgTmp;
     // Allocation mémoire pour ImgTmp (une imagette complète)
@@ -683,9 +673,9 @@ void generationImage_ppm(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size, 
             for (const auto& pair : base_images) {
                 if (uset.find(pair.first) == uset.end()) {
                     double distance = sqrt(
-                        pow(pair.second.at(CRITERE)[0] - ImgIn[(i * nW + j) * 3], 2) +
-                        pow(pair.second.at(CRITERE)[1] - ImgIn[(i * nW + j) * 3 + 1], 2) +
-                        pow(pair.second.at(CRITERE)[2] - ImgIn[(i * nW + j) * 3 + 2], 2)
+                        pow(pair.second.at(critere)[0] - ImgIn[(i * nW + j) * 3], 2) +
+                        pow(pair.second.at(critere)[1] - ImgIn[(i * nW + j) * 3 + 1], 2) +
+                        pow(pair.second.at(critere)[2] - ImgIn[(i * nW + j) * 3 + 2], 2)
                     );
 
                     if (distance < distanceMin) {
@@ -793,6 +783,7 @@ int main()
     cout << "Chargement de la base terminé en : " << minutes << "m " << seconds << "s" << endl;
 
     while (continuer) {
+        // TODO refaire fonctionner les images PGM
         do {
             cout << "Veuillez donner une image à transformer en mosaïque :" << endl;
             cin >> ImgInName;
@@ -815,10 +806,9 @@ int main()
             cout << tailles_imagettes_str[i] << tailles_imagettes_reco[i] << endl;
         cout << "Autre tailles possible : ";
         // TODO vérifier que l'image n'est pas plus petite que taille_imagettes
-        for (int taille_imagettes : tailles_imagettes) {
+        for (int taille_imagettes : tailles_imagettes)
             if (find(tailles_imagettes_reco.begin(), tailles_imagettes_reco.end(), taille_imagettes) == tailles_imagettes_reco.end())
                 cout << taille_imagettes << " ";
-        }
         cout << endl;
         cout << "Veuillez choisir une taille d'imagette : " << endl;
         cin >> taille_imagette;
@@ -855,7 +845,7 @@ int main()
 
         cout << "Génération de l'image mosaïque (PGM)" << endl;
         start_time = chrono::steady_clock::now();
-        generationImage(ImgOut_pgm, ImgOut_pgm, nH, nW, taille_imagette, base_images_pgm, taille_imagette);
+        generationImage_pgm(ImgOut_pgm, ImgOut_pgm, nH, nW, taille_imagette, "moyenne", base_images_pgm, taille_imagette);
         string image_mosaique_pgm = "out/"+ImgOutName+"_mosaique.pgm";
         ecrire_image_pgm(const_cast<char*>(image_mosaique_pgm.c_str()), ImgOut_pgm, nH, nW);
         elapsed = chrono::duration_cast<chrono::seconds>(chrono::steady_clock::now() - start_time).count();
@@ -865,7 +855,7 @@ int main()
         cout << "Génération de l'image mosaïque (PPM)" << endl;
         start_time = chrono::steady_clock::now();
         string image_mosaique_ppm = "out/"+ImgOutName+"_mosaique.ppm";
-        generationImage_ppm(ImgOut_ppm, ImgOut2, nH, nW, taille_imagette, base_images_ppm, taille_imagette);
+        generationImage_ppm(ImgOut_ppm, ImgOut2, nH, nW, taille_imagette, "moyenne", base_images_ppm, taille_imagette);
         ecrire_image_ppm(const_cast<char*>(image_mosaique_ppm.c_str()), ImgOut2, nH, nW);
         elapsed = chrono::duration_cast<chrono::seconds>(chrono::steady_clock::now() - start_time).count();
         minutes = static_cast<int>(elapsed / 60);
