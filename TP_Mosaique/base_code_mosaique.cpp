@@ -173,13 +173,18 @@ unordered_map<string, unordered_map<string, vector<double>>> charger_base_images
         double moyenne;
 
         // Lire le chemin et la moyenne
-        if (getline(iss, path, ',') && iss >> moyenne && getline(iss, histogramme_str, ',')) {
+        if (getline(iss, path, ',') && iss >> moyenne && iss >> histogramme_str) {
             // Convertir l'histogramme (séparé par des points-virgules) en vecteur de doubles
             vector<double> histogramme;
             istringstream hist_stream(histogramme_str);
             string hist_value;
             while (getline(hist_stream, hist_value, ';')) {
-                histogramme.push_back(stod(hist_value));
+                if (hist_value[0] != ',') {
+                    histogramme.push_back(stod(hist_value));
+                } else {
+                    hist_value = hist_value.substr(1);
+                    histogramme.push_back(stod(hist_value));
+                }
             }
 
             // Ajouter les données dans la structure
@@ -596,6 +601,21 @@ vector<int> choix_taille_imagette(int nW) {
     return tailles_imagettes;
 }
 
+vector<vector<double>> calc_histograms(OCTET* ImgIn, int nr_composantes,
+    int start_x, int start_y, int nH, int nW, int taille_imagette) {
+    vector<vector<double>> histograms(nr_composantes);
+    for (int i = 0; i < nr_composantes; i++) {
+        histograms[i].resize(256);
+        for (int y = 0; y < taille_imagette; y++)
+            for (int x = 0; x < taille_imagette; x++) {
+                if (start_y + y < nH && start_x + x < nW) {
+                    histograms[i][ImgIn[(start_y + y) * nW  * nr_composantes + (start_x + x * nr_composantes)]] ++;
+                }
+            }
+    }
+    return histograms;
+}
+
 //-------------------------------------------------------------------------------------------------------------
 // ------------------------------------------ Traitement de l'image -------------------------------------------
 //-------------------------------------------------------------------------------------------------------------
@@ -605,40 +625,121 @@ vector<int> choix_taille_imagette(int nW) {
             //-------------------------------------------------------------------------------------
 
 // Méthode de génération de l'image mosaïque à partir des données calculées : 
-void generationImage_pgm(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size, const string& critere,
-    unordered_map<string,unordered_map<string, vector<double>>>& base_images, int taille_imagette) {
+void generationImage_pgm_moyenne(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int taille_imagette,
+    unordered_map<string, unordered_map<string, vector<double>>>& base_images) {
     int nTaille = nH * nW;
-    OCTET* ImgTmp, *ImgTmp_pgm;
+    OCTET *ImgTmp, *ImgTmp_pgm;
     allocation_tableau(ImgTmp, OCTET, taille_imagette * taille_imagette * 3);
     allocation_tableau(ImgTmp_pgm, OCTET, taille_imagette * taille_imagette);
-    unordered_set<string> uset;
+    unordered_set<string> imagettes_used;
     auto start_time = chrono::steady_clock::now();
-    for (int i = 0; i < nH; i += size) {
-        for (int j = 0; j < nW; j += size) {
-            int distanceMin = 256;
+    for (int i = 0; i < nH; i += taille_imagette) {
+        for (int j = 0; j < nW; j += taille_imagette) {
+            double distanceMin = 256;
             string path;
-            for (const auto& pair : base_images) {
-                if (uset.find(pair.first) == uset.end()) {
-                    if (abs(pair.second.at(critere)[0] - ImgIn[i * nW + j]) < distanceMin) {
-                        distanceMin = abs(pair.second.at(critere)[0] - ImgIn[i * nW + j]);
+            for (const auto& pair : base_images)
+                if (imagettes_used.find(pair.first) == imagettes_used.end()) {
+                    if (abs(pair.second.at("moyenne")[0] - ImgIn[i * nW + j]) < distanceMin) {
+                        distanceMin = abs(pair.second.at("moyenne")[0] - ImgIn[i * nW + j]);
                         path = pair.first;
                     }
-                    if (distanceMin == 0) {
+                    if (distanceMin == 0)
                         break;
-                    }
                 }
-            }
-            uset.insert(path);
-            lire_image_ppm(const_cast<char*>(path.c_str()), ImgTmp, taille_imagette * taille_imagette);
+
+            imagettes_used.insert(path);
+            lire_image_ppm(const_cast<char *>(path.c_str()), ImgTmp, taille_imagette * taille_imagette);
             convertir_ppm_pgm(ImgTmp, ImgTmp_pgm, taille_imagette, taille_imagette);
 
-            for (int y = 0; y < size; y++) {
-                for (int x = 0; x < size; x++) {
+            for (int y = 0; y < taille_imagette; y++)
+                for (int x = 0; x < taille_imagette; x++) {
                     if (i + y < nH && j + x < nW) {
-                        ImgOut[(i + y) * nW + (j + x)] = ImgTmp_pgm[y * size + x];
+                        ImgOut[(i + y) * nW + (j + x)] = ImgTmp_pgm[y * taille_imagette + x];
                     }
                 }
-            }
+        afficherProgression(i * nW + j, nTaille, start_time);
+        }
+    }
+    afficherProgression(1, 1, start_time);
+    cout << endl;
+    free(ImgTmp);
+}
+
+double correlation_histo(const vector<double>& histoA, const vector<double>& histoB) {
+    if (histoA.size() != histoB.size()) {
+        cerr << "Les histogrammes doivent avoir la même taille." << endl;
+        return -1;
+    }
+
+    int N = histoA.size();
+    double sumA = 0, sumB = 0;
+    double sumA2 = 0, sumB2 = 0;
+    double sumAB = 0;
+
+    // Calcul des sommes nécessaires
+    for (int i = 0; i < N; ++i) {
+        sumA += histoA[i];
+        sumB += histoB[i];
+        sumA2 += histoA[i] * histoA[i];
+        sumB2 += histoB[i] * histoB[i];
+        sumAB += histoA[i] * histoB[i];
+    }
+
+    // Moyennes des histogrammes
+    double meanA = sumA / N;
+    double meanB = sumB / N;
+
+    // Calcul de la corrélation de Pearson
+    double numerator = sumAB - N * meanA * meanB;
+    double denominator = std::sqrt((sumA2 - N * meanA * meanA) * (sumB2 - N * meanB * meanB));
+
+    // Si le dénominateur est nul, retourner 0 (pas de corrélation)
+    if (denominator == 0) {
+        cerr << "Erreur : Dénominateur nul, la corrélation est indéfinie." << endl;
+        return 0;
+    }
+
+    return numerator / denominator;
+}
+
+void generationImage_pgm_histo(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int taille_imagette,
+    unordered_map<string, unordered_map<string, vector<double>>>& base_images) {
+    int nTaille = nH * nW;
+    OCTET *ImgTmp, *ImgTmp_pgm;
+    allocation_tableau(ImgTmp, OCTET, taille_imagette * taille_imagette * 3);
+    allocation_tableau(ImgTmp_pgm, OCTET, taille_imagette * taille_imagette);
+    unordered_set<string> imagettes_used;
+    auto start_time = chrono::steady_clock::now();
+    for (int i = 0; i < nH; i += taille_imagette) {
+        for (int j = 0; j < nW; j += taille_imagette) {
+            double distanceMax = 0;
+            string path;
+            vector<vector<double>> histograms = calc_histograms(ImgIn, 1, j, i, nH, nW, taille_imagette);
+
+            for (const auto& pair : base_images)
+                if (imagettes_used.find(pair.first) == imagettes_used.end()) {
+                    double distance = 0;
+                    distance = correlation_histo(pair.second.at("histogramme"), histograms[0]);
+                    if (distance > distanceMax) {
+                        distanceMax = distance;
+                        path = pair.first;
+                    }
+                    if (distanceMax == 1.0f)
+                        break;
+                }
+
+            // cout << path << endl;
+            // imagettes_used.insert(path);
+            lire_image_ppm(const_cast<char *>(path.c_str()), ImgTmp, taille_imagette * taille_imagette);
+            convertir_ppm_pgm(ImgTmp, ImgTmp_pgm, taille_imagette, taille_imagette);
+
+            for (int y = 0; y < taille_imagette; y++)
+                for (int x = 0; x < taille_imagette; x++) {
+                    if (i + y < nH && j + x < nW) {
+                        ImgOut[(i + y) * nW + (j + x)] = ImgTmp_pgm[y * taille_imagette + x];
+                    }
+                }
+
         afficherProgression(i * nW + j, nTaille, start_time);
         }
     }
@@ -653,19 +754,19 @@ void generationImage_pgm(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size, 
 
 // Méthode de génération de l'image mosaïque à partir des données calculées : 
 //O( nH*nW*M / size^2 )
-void generationImage_ppm(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size, const string& critere,
-    unordered_map<string,unordered_map<string, vector<double>>>& base_images, int taille_imagette) {
+void generationImage_ppm_moyenne(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int taille_imagette,
+    unordered_map<string,unordered_map<string, vector<double>>>& base_images) {
     int nTaille = nH * nW;
     OCTET* ImgTmp;
     // Allocation mémoire pour ImgTmp (une imagette complète)
     allocation_tableau(ImgTmp, OCTET, taille_imagette * taille_imagette * 3);
     OCTET* ImgResized ;
-    allocation_tableau(ImgResized,OCTET, size * size * 3);
+    allocation_tableau(ImgResized,OCTET, taille_imagette * taille_imagette * 3);
     unordered_set<string> uset;
     auto start_time = chrono::steady_clock::now();
     // Boucles pour parcourir l'image d'entrée par blocs de 'size x size'
-    for (int i = 0; i < nH; i += size) {
-        for (int j = 0; j < nW; j += size) {
+    for (int i = 0; i < nH; i += taille_imagette) {
+        for (int j = 0; j < nW; j += taille_imagette) {
             int distanceMin = 256;
             string path;
 
@@ -673,9 +774,9 @@ void generationImage_ppm(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size, 
             for (const auto& pair : base_images) {
                 if (uset.find(pair.first) == uset.end()) {
                     double distance = sqrt(
-                        pow(pair.second.at(critere)[0] - ImgIn[(i * nW + j) * 3], 2) +
-                        pow(pair.second.at(critere)[1] - ImgIn[(i * nW + j) * 3 + 1], 2) +
-                        pow(pair.second.at(critere)[2] - ImgIn[(i * nW + j) * 3 + 2], 2)
+                        pow(pair.second.at("moyenne")[0] - ImgIn[(i * nW + j) * 3], 2) +
+                        pow(pair.second.at("moyenne")[1] - ImgIn[(i * nW + j) * 3 + 1], 2) +
+                        pow(pair.second.at("moyenne")[2] - ImgIn[(i * nW + j) * 3 + 2], 2)
                     );
 
                     if (distance < distanceMin) {
@@ -694,10 +795,10 @@ void generationImage_ppm(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int size, 
             lire_image_ppm(const_cast<char*>(path.c_str()), ImgTmp, taille_imagette * taille_imagette);
 
             // Insérer l'image redimensionnée dans ImgOut à la position (i, j)
-            for (int y = 0; y < size; y++) {
-                for (int x = 0; x < size; x++) {
+            for (int y = 0; y < taille_imagette; y++) {
+                for (int x = 0; x < taille_imagette; x++) {
                     int imgOutIdx = ((i + y) * nW + (j + x)) * 3;
-                    int resizedIdx = (y * size + x) * 3;
+                    int resizedIdx = (y * taille_imagette + x) * 3;
 
                     // Récupérer les valeurs RGB et les insérer en RGB dans ImgOut
                     ImgOut[imgOutIdx] = ImgTmp[resizedIdx];        // Rouge
@@ -782,7 +883,9 @@ int main()
     int seconds = static_cast<int>(elapsed % 60);
     cout << "Chargement de la base terminé en : " << minutes << "m " << seconds << "s" << endl;
 
-    while (continuer) {
+    do {
+        // TODO faire choisir le critère
+        string critere = "histo";
         // TODO refaire fonctionner les images PGM
         do {
             cout << "Veuillez donner une image à transformer en mosaïque :" << endl;
@@ -848,7 +951,10 @@ int main()
 
         cout << "Génération de l'image mosaïque (PGM)" << endl;
         start_time = chrono::steady_clock::now();
-        generationImage_pgm(ImgOut_pgm, ImgOut_pgm, nH, nW, taille_imagette, "moyenne", base_images_pgm, taille_imagette);
+        if (critere == "moyenne")
+            generationImage_pgm_moyenne(ImgOut_pgm, ImgOut_pgm, nH, nW, taille_imagette, base_images_pgm);
+        else
+            generationImage_pgm_histo(ImgIn_pgm, ImgOut_pgm, nH, nW, taille_imagette, base_images_pgm);
         string image_mosaique_pgm = "out/"+ImgOutName+"_mosaique.pgm";
         ecrire_image_pgm(const_cast<char*>(image_mosaique_pgm.c_str()), ImgOut_pgm, nH, nW);
         elapsed = chrono::duration_cast<chrono::seconds>(chrono::steady_clock::now() - start_time).count();
@@ -858,7 +964,10 @@ int main()
         cout << "Génération de l'image mosaïque (PPM)" << endl;
         start_time = chrono::steady_clock::now();
         string image_mosaique_ppm = "out/"+ImgOutName+"_mosaique.ppm";
-        generationImage_ppm(ImgOut_ppm, ImgOut2, nH, nW, taille_imagette, "moyenne", base_images_ppm, taille_imagette);
+        if (critere == "moyenne")
+            generationImage_ppm_moyenne(ImgOut_ppm, ImgOut2, nH, nW, taille_imagette, base_images_ppm);
+        else
+            generationImage_ppm_moyenne(ImgOut_ppm, ImgOut2, nH, nW, taille_imagette, base_images_ppm);
         ecrire_image_ppm(const_cast<char*>(image_mosaique_ppm.c_str()), ImgOut2, nH, nW);
         elapsed = chrono::duration_cast<chrono::seconds>(chrono::steady_clock::now() - start_time).count();
         minutes = static_cast<int>(elapsed / 60);
@@ -877,12 +986,12 @@ int main()
         cout << " - EQM : " << eqm_ppm << endl;
         cout << " - PSNR : " << psnr_ppm << endl;
 
-        cout << "Voulez-vous continuer ? [O/n]" << endl;
-        string reponse = "o";
-        cin >> reponse;
-        if (reponse=="n" || reponse=="N" || reponse=="non" || reponse=="Non")
+        // cout << "Voulez-vous continuer ? [O/n]" << endl;
+        // string reponse;
+        // cin >> reponse;
+        // if (reponse=="n" || reponse=="N" || reponse=="non" || reponse=="Non")
             continuer = false;
-    }
+    } while (continuer);
 
     free(ImgIn_ppm);
     free(ImgOut_ppm);
