@@ -101,8 +101,22 @@ int main(int argc, char** argv){
     cout << "Préparation de l'image..." << endl;
     img.read(imgPath);
 
+    size_t maxDim = max(img.getWidth(), img.getHeight());
+
+    if(maxDim > 512) {
+        newWidth = (size_t) (((float) img.getWidth() / (float) img.getHeight()) * 512.0);
+        newHeight = (size_t) (((float) img.getHeight() / (float) img.getWidth()) * 512.0);
+
+        img.resize(
+            img.getWidth() == maxDim ? 512 : newWidth,
+            img.getHeight() == maxDim ? 512 : newHeight
+        );
+    }
+
     newWidth = (img.getWidth() / BLOCK_SIZE) * STICKER_SIZE;
     newHeight = (img.getHeight() / BLOCK_SIZE) * STICKER_SIZE;
+
+    
 
     img.resize(newWidth, newHeight);
 
