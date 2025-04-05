@@ -791,7 +791,7 @@ int main()
                 break;
             cout << "L'image n'existe pas." << endl;
         } while (true);
-        ImgOutName = ImgInName;
+        ImgOutName = ImgInName.substr(0, ImgInName.size()-4);
         lire_nb_lignes_colonnes_image_ppm(const_cast<char*>(("./in/"+ImgInName).c_str()), &nH, &nW);
         nTaille = nH * nW;
         allocation_tableau(ImgIn_ppm, OCTET, nTaille*3);
@@ -814,8 +814,11 @@ int main()
         cin >> taille_imagette;
 
         redimensionner_image(ImgIn_ppm, nH,nW, taille_imagette);
-        nTaille = nH * nW;
-        ecrire_image_ppm(const_cast<char*>(("./out/"+ImgOutName+"_redim.ppm").c_str()), ImgIn_ppm, nH, nW);
+        // redimensionne l'image que si nécessaire
+        if (nTaille != nH * nW) {
+            nTaille = nH * nW;
+            ecrire_image_ppm(const_cast<char*>(("./out/"+ImgOutName+"_redim.ppm").c_str()), ImgIn_ppm, nH, nW);
+        }
         allocation_tableau(ImgIn_pgm, OCTET, nTaille);
         allocation_tableau(ImgOut_pgm, OCTET, nTaille);
         allocation_tableau(ImgOut_ppm, OCTET, nTaille*3);
