@@ -55,7 +55,7 @@ void afficherProgression(int current, int total, chrono::steady_clock::time_poin
     cout << "] " << (current * 100) / total << "%";
     auto now = chrono::steady_clock::now();
     auto elapsed = chrono::duration_cast<chrono::seconds>(now - start_time).count();
-    int remaining = (current > 0) ? ((elapsed * (total - current)) / current) : 0;
+    int remaining = current > 0 ? elapsed * (total - current) / current : 0;
     int minutes = remaining / 60;
     int seconds = remaining % 60;
     if (seconds < 10) cout << " - Temps restant estimé : " << minutes << "m 0" << seconds << "s\r";
@@ -80,11 +80,9 @@ void convertir_jpg_en_ppm(const string& chemin_jpg, const string& chemin_ppm,int
 
 // Fonction pour convertir une image PPM en PGM
 void convertir_ppm_pgm(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW) {
-    for (int i = 0; i < nH; i++) {
-        for (int j = 0; j < nW; j++) {
+    for (int i = 0; i < nH; i++)
+        for (int j = 0; j < nW; j++)
             ImgOut[i * nW + j] = 0.299 * ImgIn[(i * nW + j) * 3] + 0.587 * ImgIn[(i * nW + j) * 3 + 1] + 0.114 * ImgIn[(i * nW + j) * 3 + 2];
-        }
-    }
 }
 
 //-------------------------------------------------------------------------------------------------------------
@@ -156,7 +154,7 @@ void sauver_base_Image(const unordered_map<string, unordered_map<string, vector<
     cout << "Base d'images sauvegardée dans : " << fichier << endl;
 }
 
-// Méthode pour charger les données enregistrées précédemment : 
+// Méthode pour charger les données enregistrées précédemment :
 unordered_map<string, unordered_map<string, vector<double>>> charger_base_images_pgm_depuis_fichier(const string& fichier) {
     unordered_map<string, unordered_map<string, vector<double>>> base_images;
     ifstream in(fichier);
@@ -169,6 +167,10 @@ unordered_map<string, unordered_map<string, vector<double>>> charger_base_images
     cout << " - Chargement de la base d'images PGM..." << endl;
 
     string line;
+
+    // ignore le nom des colonnes
+    getline(in, line);
+
     while (getline(in, line)) {
         istringstream iss(line);
         string path, histogramme_str;
@@ -187,9 +189,8 @@ unordered_map<string, unordered_map<string, vector<double>>> charger_base_images
             // Ajouter les données dans la structure
             base_images[path]["moyenne"] = {moyenne};
             base_images[path]["histogramme"] = histogramme;
-        } else {
+        } else
             cerr << "    - Format incorrect dans le fichier : " << line << endl;
-        }
     }
 
     cout << "    - Chargement terminé" << endl;
@@ -388,6 +389,10 @@ unordered_map<string, unordered_map<string, vector<double>>> charger_base_images
     cout << " - Chargement de la base d'images PPM..." << endl;
 
     string line;
+
+    // ignore le nom des colonnes
+    getline(in, line);
+
     while (getline(in, line)) {
         istringstream iss(line);
         string path, hist_R_str, hist_G_str, hist_B_str;
@@ -476,11 +481,10 @@ void decoupe_ppm(OCTET* Imgin, OCTET* ImgOut, int nH, int nW, int size){
 //Calcul du critère moyenneur :
 // O(nH*nW)
 unordered_map<string,vector<double>> critere_img_mean_ppm(OCTET* ImgIn,int nH,int nW){
-    vector<double> moyenne;
+	vector moyenne = {0.0, 0.0, 0.0};
     vector<double> hist_R;
     vector<double> hist_G;
     vector<double> hist_B;
-	moyenne = {0.0,0.0,0.0};
     hist_R.assign(256,0.0);
     hist_G.assign(256,0.0);
     hist_B.assign(256,0.0);
@@ -595,13 +599,11 @@ void generer_base_imagettes(const string& dossier_source, const string& dossier_
 vector<int> choix_taille_imagette(int nW) {
     vector<int> tailles_imagettes;
     vector tailles = {20,40,80};
-    int nv_entree;
-    for(int blocs : tailles){
+    for (int blocs : tailles) {
         int taille_imagette = nW/blocs;
-        nv_entree = max(4,min(128, static_cast<int>(pow(2,round(log2(taille_imagette))))));
-        if(find(tailles_imagettes.begin(), tailles_imagettes.end(), nv_entree) == tailles_imagettes.end()){
+        int nv_entree = max(4, min(128, static_cast<int>(pow(2, round(log2(taille_imagette))))));
+        if (find(tailles_imagettes.begin(), tailles_imagettes.end(), nv_entree) == tailles_imagettes.end())
             tailles_imagettes.push_back(nv_entree);
-        }
     }
     return tailles_imagettes;
 }
@@ -804,6 +806,7 @@ int main()
         allocation_tableau(ImgIn_ppm, OCTET, nTaille*3);
         lire_image_ppm(const_cast<char*>(("./in/"+ImgInName).c_str()), ImgIn_ppm, nTaille);
 
+        // TODO boucle while tant qu'on a pas choisi une option valide
         vector tailles_imagettes{4, 8, 16, 32, 64, 128};
         vector<int> tailles_imagettes_reco = choix_taille_imagette(nW);
         cout << "Tailles d'imagettes recommandées : " << endl;
@@ -811,9 +814,10 @@ int main()
         for (int i=0; i < tailles_imagettes_reco.size(); i++)
             cout << tailles_imagettes_str[i] << tailles_imagettes_reco[i] << endl;
         cout << "Autre tailles possible : ";
+        // TODO vérifier que l'image n'est pas plus petite que taille_imagettes
         for (int taille_imagettes : tailles_imagettes) {
             if (find(tailles_imagettes_reco.begin(), tailles_imagettes_reco.end(), taille_imagettes) == tailles_imagettes_reco.end())
-                cout << taille_imagettes << " "; // TODO vérifier que l'image n'est pas plus petite que taille_imagettes
+                cout << taille_imagettes << " ";
         }
         cout << endl;
         cout << "Veuillez choisir une taille d'imagette : " << endl;
