@@ -24,10 +24,12 @@ class Image {
         size_t getHeight();
         size_t size();
         virtual octet* operator[] (size_t i); // Opérateur virtuel
+        virtual octet average();
 
         /* Setter virtuel */
         virtual void resize(size_t newWidth, size_t newHeight);
         virtual void segment(size_t blockSize);
+        virtual void mosaic(size_t blockSize, const char* libPath, size_t libSize);
 
         /* Chiffrement */
         virtual size_t* swap(size_t blockSize);

@@ -26,6 +26,32 @@ octet *ImagePPM::operator[](size_t i) {
     exit(EXIT_FAILURE);
 }
 
+ImagePGM ImagePPM::toPGM() {
+    octet* grey  = (octet*) calloc(size(), sizeof(octet));
+
+    for(size_t i = 0; i < size() * 3; i++){
+        grey[i / 3] = 0.299 * ((float) colors[i]) + 0.587 * ((float) colors[i + 1]) + 0.114 * ((float) colors[i + 2]);
+    }
+
+    ImagePGM img(width, height);
+
+    for(size_t i = 0; i < height; i++){
+        for(size_t j = 0; j < width; j++){
+            img[i][j] = grey[(i * width) + j];
+        }
+    }
+
+    return img;
+}
+
+octet ImagePPM::average() {
+    ImagePGM pgm = toPGM();
+    octet avr = pgm.average();
+
+    delete &pgm;
+    return avr;
+}
+
 void ImagePPM::operator= (const ImagePPM &other) {
     width = other.width;
     height = other.height;
@@ -138,6 +164,8 @@ void ImagePPM::segment(size_t newBlockSize) {
         }
     }
 }
+
+void ImagePPM::mosaic(size_t blockSize, const char* libPath, size_t libSize) {}
 
 size_t *ImagePPM::swap(size_t blockSize) {
     size_t widthFactor, heightFactor, nbBlock;
@@ -292,6 +320,8 @@ void ImagePPM::read(const char *path) {
     }
 
     size = width * height * 3;
+
+    free(colors);
 
     /* Lecture des valeurs */
     colors = (octet *)calloc(size, sizeof(octet));

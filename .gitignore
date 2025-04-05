@@ -7,6 +7,7 @@
 obj/
 bin/
 img/
+pgm/
 *.o
 *.pgm
 *.ppm
@@ -15,6 +16,9 @@ img/
 .vscode/
 .idea/
 .DS_Store
+
+doc.cpp
+doc2.cpp
 
 # TP Mosaïque
 in/

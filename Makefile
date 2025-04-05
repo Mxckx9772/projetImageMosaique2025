@@ -1,5 +1,5 @@
 COMPILER = g++
-FLAGS = -Wall
+FLAGS = -Wall -O3 -mavx2
 
 INCLUDE_DIR = include
 LIB_DIR = lib

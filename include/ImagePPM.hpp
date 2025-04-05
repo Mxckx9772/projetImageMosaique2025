@@ -2,6 +2,7 @@
 #define IMAGE_PPM_H
 
 #include "Image.hpp"
+#include "ImagePGM.hpp"
 
 class ImagePPM : public Image {
     private:
@@ -17,10 +18,13 @@ class ImagePPM : public Image {
         octet* operator[] (size_t i) override;
 
         void operator= (const ImagePPM &other);
+        ImagePGM toPGM();
+        octet average() override;
 
         /* Setter */
         void resize(size_t newWidth, size_t newHeight) override;
         void segment(size_t blockSize) override;
+        void mosaic(size_t blockSize, const char* libPath, size_t libSize) override;
 
         /* Chiffrement */
         size_t* swap(size_t blockSize) override;
