@@ -949,21 +949,30 @@ int main()
         allocation_tableau(ImgIn_ppm, OCTET, nTaille*3);
         lire_image_ppm(const_cast<char*>(("./in/"+ImgInName).c_str()), ImgIn_ppm, nTaille);
 
-        // TODO boucle while tant qu'on a pas choisi une option valide
         vector tailles_imagettes{4, 8, 16, 32, 64, 128};
         vector<int> tailles_imagettes_reco = choix_taille_imagette(nW);
+        vector<int> tailles_imagettes_possible;
         cout << "Tailles d'imagettes recommandées : " << endl;
         vector<string> tailles_imagettes_str = {" - hautes qualité : "," - moyennes qualité : "," - basse qualité : "};
-        for (int i=0; i < tailles_imagettes_reco.size(); i++)
+        for (int i=0; i < tailles_imagettes_reco.size(); i++) {
             cout << tailles_imagettes_str[i] << tailles_imagettes_reco[i] << endl;
+            tailles_imagettes_possible.push_back(tailles_imagettes_reco[i]);
+        }
         cout << "Autre tailles possible : ";
-        // TODO vérifier que l'image n'est pas plus petite que taille_imagettes
         for (int taille_imagettes : tailles_imagettes)
-            if (find(tailles_imagettes_reco.begin(), tailles_imagettes_reco.end(), taille_imagettes) == tailles_imagettes_reco.end())
+            if (find(tailles_imagettes_reco.begin(), tailles_imagettes_reco.end(), taille_imagettes) == tailles_imagettes_reco.end()
+                    && taille_imagettes <= nW) {
                 cout << taille_imagettes << " ";
+                tailles_imagettes_possible.push_back(taille_imagettes);
+            }
         cout << endl;
-        cout << "Veuillez choisir une taille d'imagette : " << endl;
-        cin >> taille_imagette;
+        do {
+            cout << "Veuillez choisir une taille d'imagette : " << endl;
+            cin >> taille_imagette;
+            if (find(tailles_imagettes_possible.begin(), tailles_imagettes_possible.end(), taille_imagette) != tailles_imagettes_possible.end())
+                break;
+            cout << "La taille d'imagette n'est pas valide." << endl;
+        } while (true);
 
         redimensionner_image(ImgIn_ppm, nH,nW, taille_imagette);
         // redimensionne l'image que si nécessaire
