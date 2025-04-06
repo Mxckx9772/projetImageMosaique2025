@@ -566,13 +566,13 @@ void convertir(const string& source_folder, const string& ppm_folder, int size) 
 
 void generer_base_imagettes(const string& dossier_source, const string& dossier_destination) {
     if(!filesystem::exists(dossier_source)){
-        cout << "Le dossier " << dossier_source << " n'existe pas." << endl;
+        cout << " - Le dossier " << dossier_source << " n'existe pas." << endl;
         return;
     }
     for(int i=2; i<=7 ;i++){
         int taille_imagette = pow(2,i);
         string dossier_sortie = dossier_destination + "/imagettes_" + to_string(taille_imagette);
-        cout<<"Génération de la base pour les imagettes de taille : "<<taille_imagette<<endl;
+        cout<<" - Génération de la base pour les imagettes de taille : "<<taille_imagette<<endl;
         if(!filesystem::exists(dossier_sortie)){
             convertir(dossier_source, dossier_sortie, taille_imagette);
             filesystem::create_directories(dossier_sortie);
@@ -930,7 +930,7 @@ int main()
     auto elapsed = chrono::duration_cast<chrono::seconds>(chrono::steady_clock::now() - start_time).count();
     int minutes = static_cast<int>(elapsed / 60);
     int seconds = static_cast<int>(elapsed % 60);
-    cout << "Chargement de la base terminé en : " << minutes << "m " << seconds << "s" << endl;
+    cout << " - Chargement de la base terminé en : " << minutes << "m " << seconds << "s" << endl;
 
     do {
         do {
