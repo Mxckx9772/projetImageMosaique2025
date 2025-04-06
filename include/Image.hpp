@@ -41,4 +41,5 @@ class Image {
 };
 
 uint32_t getNanoSecondSeed();
+void printPercent(int pourcentage);
 #endif

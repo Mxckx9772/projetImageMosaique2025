@@ -5,6 +5,8 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <ctime>
+#include <iomanip>
 
 #include "include/ImagePPM.hpp"
 #include "include/ImagePGM.hpp"
@@ -44,9 +46,11 @@ int main(int argc, char** argv){
     char imgPath[250];
     ImagePPM stickerPPM;
     ImagePGM img, stickerPGM;
-    size_t newWidth, newHeight, percent, currentPercent;
+    size_t newWidth, newHeight, percent, currentPercent, maxDim;
     string stickerName;
     vector<char*> library;
+    clock_t start, end;
+    double duration;
     
     switch (argc) {
         case 2:
@@ -81,6 +85,7 @@ int main(int argc, char** argv){
     getPathList("img", &library);
     percent = 0;
     cout << "Préparation de la librairie d'image..." << endl;
+    start = clock();
     for(size_t i = 0; i < LIB_SIZE; i++){
         string stickerName = string(LIB_PATH) + string("/") + to_string(i) + string(".pgm");
         stickerPPM.read(library[i]);
@@ -93,15 +98,20 @@ int main(int argc, char** argv){
 
         if(currentPercent != percent || i == 0) {
             percent = currentPercent;
-            cout << "[" << percent << "%]" << endl;
+            printPercent(percent);
         }
     }
-    cout << "[100%]" << endl;
+    end = clock();
+    duration = ((end - start) / CLOCKS_PER_SEC) / 60.0;
+    printPercent(100);
+    
+    cout << endl << endl;
+    cout << "Temps de traitement : " << fixed << setprecision(3) << duration << " min" << endl;
 
     cout << "Préparation de l'image..." << endl;
     img.read(imgPath);
 
-    size_t maxDim = max(img.getWidth(), img.getHeight());
+    maxDim = max(img.getWidth(), img.getHeight());
 
     if(maxDim > 512) {
         newWidth = (size_t) (((float) img.getWidth() / (float) img.getHeight()) * 512.0);
@@ -121,8 +131,12 @@ int main(int argc, char** argv){
     img.resize(newWidth, newHeight);
 
     cout << "Création de la mosaique.." << endl;
+    start = clock();
     img.mosaic(STICKER_SIZE, LIB_PATH, LIB_SIZE);
+    end = clock();
 
+    duration = ((end - start) / CLOCKS_PER_SEC) / 60.0;
+    cout << "Temps de traitement : " << fixed << setprecision(3) << duration << " min" << endl;
     img.write("mosaic.pgm");
     
     return 0;

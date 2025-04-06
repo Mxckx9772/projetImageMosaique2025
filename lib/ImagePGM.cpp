@@ -289,10 +289,11 @@ void ImagePGM::mosaic(size_t blockSize, const char* libPath, size_t libSize) {
         currentPercent = (((float) blockId / (float) nbBlock) * 100.0);
         if(currentPercent != percent || blockId == 0) {
             percent = currentPercent;
-            cout << "[" << percent << "%]" << endl;
+            printPercent(percent);
         }
     }
-    cout << "[100%]" << endl;
+    printPercent(100);
+    cout << endl;
 
     free(grey);
     grey = newGrey;
@@ -547,10 +548,4 @@ void ImagePGM::write(const char *path, const char *comment) {
     }
 
     fclose(file);
-}
-
-uint32_t getNanoSecondSeed() {
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    return (uint32_t)(ts.tv_nsec);
 }
