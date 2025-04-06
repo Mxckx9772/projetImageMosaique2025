@@ -916,7 +916,7 @@ double PSNR_ppm(OCTET* img1, OCTET* img2, int nH, int nW) {
 int main()
 {
     OCTET *ImgIn_ppm, *ImgOut_ppm, *ImgIn_pgm, *ImgOut_pgm, *ImgOut2;
-    string ImgInName, ImgOutName;
+    string ImgInName, ImgOutName, critere;
     int nH, nW, nTaille, taille_imagette;
     bool continuer = true;
     unordered_map<string,unordered_map<string, vector<double>>> base_images_ppm;
@@ -933,8 +933,14 @@ int main()
     cout << "Chargement de la base terminé en : " << minutes << "m " << seconds << "s" << endl;
 
     do {
-        // TODO faire choisir le critère
-        string critere = "histo";
+        do {
+            cout << "Veuillez choisir un critère (0 : moyenne / 1 : distance d'histogramme) :" << endl;
+            cin >> critere;
+            if (critere == "0" || critere == "1")
+                break;
+            cout << "Le critère n'est pas valide." << endl;
+        } while (true);
+        critere = critere == "0" ? "moyenne" : "histo";
         // TODO refaire fonctionner les images PGM
         do {
             cout << "Veuillez donner une image à transformer en mosaïque :" << endl;
