@@ -399,25 +399,22 @@ unordered_map<string, unordered_map<string, vector<double>>> charger_base_images
         if (getline(iss, path, ',') &&
             iss >> moyenne_R >> delimiter &&
             iss >> moyenne_G >> delimiter &&
-            iss >> moyenne_B &&
+            iss >> moyenne_B >> delimiter &&
             getline(iss, hist_R_str, ',') &&
             getline(iss, hist_G_str, ',') &&
             getline(iss, hist_B_str, ',')) {
-            
+
             // Convertir les histogrammes (séparés par des points-virgules) en vecteurs de doubles
             vector<double> hist_R, hist_G, hist_B;
             istringstream hist_R_stream(hist_R_str), hist_G_stream(hist_G_str), hist_B_stream(hist_B_str);
             string hist_value;
 
-            while (getline(hist_R_stream, hist_value, ';')) {
+            while (getline(hist_R_stream, hist_value, ';'))
                 hist_R.push_back(stod(hist_value));
-            }
-            while (getline(hist_G_stream, hist_value, ';')) {
+            while (getline(hist_G_stream, hist_value, ';'))
                 hist_G.push_back(stod(hist_value));
-            }
-            while (getline(hist_B_stream, hist_value, ';')) {
+            while (getline(hist_B_stream, hist_value, ';'))
                 hist_B.push_back(stod(hist_value));
-            }
 
             // Ajouter les données dans la structure
             base_images[path]["moyenne"] = {moyenne_R, moyenne_G, moyenne_B};
@@ -601,17 +598,16 @@ vector<int> choix_taille_imagette(int nW) {
     return tailles_imagettes;
 }
 
+// TODO problème avec les images couleurs
 vector<vector<double>> calc_histograms(OCTET* ImgIn, int nr_composantes,
     int start_x, int start_y, int nH, int nW, int taille_imagette) {
     vector<vector<double>> histograms(nr_composantes);
     for (int i = 0; i < nr_composantes; i++) {
         histograms[i].resize(256);
         for (int y = 0; y < taille_imagette; y++)
-            for (int x = 0; x < taille_imagette; x++) {
-                if (start_y + y < nH && start_x + x < nW) {
-                    histograms[i][ImgIn[(start_y + y) * nW  * nr_composantes + (start_x + x * nr_composantes)]] ++;
-                }
-            }
+            for (int x = 0; x < taille_imagette; x+=nr_composantes)
+                if (start_y + y < nH && start_x + x < nW)
+                    histograms[i][ImgIn[(start_y + y) * nW + (start_x + x) * nr_composantes + i]] ++;
     }
     return histograms;
 }
@@ -712,24 +708,22 @@ void generationImage_pgm_histo(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int 
     auto start_time = chrono::steady_clock::now();
     for (int i = 0; i < nH; i += taille_imagette) {
         for (int j = 0; j < nW; j += taille_imagette) {
-            double distanceMax = 0;
+            double corrMax = 0;
             string path;
             vector<vector<double>> histograms = calc_histograms(ImgIn, 1, j, i, nH, nW, taille_imagette);
 
             for (const auto& pair : base_images)
                 if (imagettes_used.find(pair.first) == imagettes_used.end()) {
-                    double distance = 0;
-                    distance = correlation_histo(pair.second.at("histogramme"), histograms[0]);
-                    if (distance > distanceMax) {
-                        distanceMax = distance;
+                    double corr = 0;
+                    corr = correlation_histo(pair.second.at("histogramme"), histograms[0]);
+                    if (corr > corrMax) {
+                        corrMax = corr;
                         path = pair.first;
                     }
-                    if (distanceMax == 1.0f)
+                    if (corrMax == 1.0f)
                         break;
                 }
 
-            // cout << path << endl;
-            // imagettes_used.insert(path);
             lire_image_ppm(const_cast<char *>(path.c_str()), ImgTmp, taille_imagette * taille_imagette);
             convertir_ppm_pgm(ImgTmp, ImgTmp_pgm, taille_imagette, taille_imagette);
 
@@ -795,6 +789,61 @@ void generationImage_ppm_moyenne(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, in
             lire_image_ppm(const_cast<char*>(path.c_str()), ImgTmp, taille_imagette * taille_imagette);
 
             // Insérer l'image redimensionnée dans ImgOut à la position (i, j)
+            for (int y = 0; y < taille_imagette; y++) {
+                for (int x = 0; x < taille_imagette; x++) {
+                    int imgOutIdx = ((i + y) * nW + (j + x)) * 3;
+                    int resizedIdx = (y * taille_imagette + x) * 3;
+
+                    // Récupérer les valeurs RGB et les insérer en RGB dans ImgOut
+                    ImgOut[imgOutIdx] = ImgTmp[resizedIdx];        // Rouge
+                    ImgOut[imgOutIdx + 1] = ImgTmp[resizedIdx + 1]; // Vert
+                    ImgOut[imgOutIdx + 2] = ImgTmp[resizedIdx + 2]; // Bleu
+                }
+            }
+            afficherProgression(i * nW + j, nTaille, start_time);
+        }
+    }
+    afficherProgression(1, 1, start_time);
+    cout << endl;
+    free(ImgResized);
+    free(ImgTmp);
+}
+
+void generationImage_ppm_histo(OCTET* ImgIn, OCTET* ImgOut, int nH, int nW, int taille_imagette,
+    unordered_map<string,unordered_map<string, vector<double>>>& base_images) {
+    int nTaille = nH * nW;
+    OCTET* ImgTmp;
+    // Allocation mémoire pour ImgTmp (une imagette complète)
+    allocation_tableau(ImgTmp, OCTET, taille_imagette * taille_imagette * 3);
+    OCTET* ImgResized ;
+    allocation_tableau(ImgResized,OCTET, taille_imagette * taille_imagette * 3);
+    unordered_set<string> imagettes_used;
+    auto start_time = chrono::steady_clock::now();
+    // Boucles pour parcourir l'image d'entrée par blocs de 'size x size'
+    for (int i = 0; i < nH; i += taille_imagette) {
+        for (int j = 0; j < nW; j += taille_imagette) {
+            double corrMoyMax = 0;
+            string path;
+            vector<vector<double>> histograms = calc_histograms(ImgIn, 3, j, i, nH, nW, taille_imagette);
+
+            for (const auto& pair : base_images) {
+                if (imagettes_used.find(pair.first) == imagettes_used.end()) {
+                    double corrR = correlation_histo(pair.second.at("hist_R"), histograms[0]);
+                    double corrG = correlation_histo(pair.second.at("hist_G"), histograms[1]);
+                    double corrB = correlation_histo(pair.second.at("hist_B"), histograms[2]);
+                    double corrMoy = (corrR + corrG + corrB) / 3;
+                    if (corrMoy > corrMoyMax) {
+                        corrMoyMax = corrMoy;
+                        path = pair.first;
+                    }
+                    // if (corrMoy == 1.0f)
+                        // break;
+                }
+            }
+
+            // cout << path << endl;
+            lire_image_ppm(const_cast<char*>(path.c_str()), ImgTmp, taille_imagette * taille_imagette);
+
             for (int y = 0; y < taille_imagette; y++) {
                 for (int x = 0; x < taille_imagette; x++) {
                     int imgOutIdx = ((i + y) * nW + (j + x)) * 3;
@@ -967,7 +1016,7 @@ int main()
         if (critere == "moyenne")
             generationImage_ppm_moyenne(ImgOut_ppm, ImgOut2, nH, nW, taille_imagette, base_images_ppm);
         else
-            generationImage_ppm_moyenne(ImgOut_ppm, ImgOut2, nH, nW, taille_imagette, base_images_ppm);
+            generationImage_ppm_histo(ImgIn_ppm, ImgOut2, nH, nW, taille_imagette, base_images_ppm);
         ecrire_image_ppm(const_cast<char*>(image_mosaique_ppm.c_str()), ImgOut2, nH, nW);
         elapsed = chrono::duration_cast<chrono::seconds>(chrono::steady_clock::now() - start_time).count();
         minutes = static_cast<int>(elapsed / 60);
