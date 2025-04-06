@@ -989,14 +989,16 @@ int main()
         else
             base_images_ppm = charger_base_images_ppm(fichier_base_images_ppm, taille_imagette);
 
-        cout << "Découpe de l'image en grille (PPM)" << endl;
-        string image_decoupe = "out/"+ImgOutName+"_decoupe.ppm";
-        decoupe_ppm(ImgIn_ppm, ImgOut_ppm, nH, nW, taille_imagette);
-        ecrire_image_ppm(const_cast<char*>(image_decoupe.c_str()), ImgOut_ppm, nH, nW);
-        cout << "Découpe de l'image en grille (PGM)" << endl;
-        std:string image_decoupe_pgm = "out/"+ImgOutName+"_decoupe.pgm";
-        decoupe_pgm(ImgIn_pgm, ImgOut_pgm, nH, nW, taille_imagette);
-        ecrire_image_pgm(const_cast<char*>(image_decoupe_pgm.c_str()), ImgOut_pgm, nH, nW);
+        if (critere == "moyenne") {
+            cout << "Découpe de l'image en grille (PPM)" << endl;
+            string image_decoupe = "out/"+ImgOutName+"_decoupe.ppm";
+            decoupe_ppm(ImgIn_ppm, ImgOut_ppm, nH, nW, taille_imagette);
+            ecrire_image_ppm(const_cast<char*>(image_decoupe.c_str()), ImgOut_ppm, nH, nW);
+            cout << "Découpe de l'image en grille (PGM)" << endl;
+            std:string image_decoupe_pgm = "out/"+ImgOutName+"_decoupe.pgm";
+            decoupe_pgm(ImgIn_pgm, ImgOut_pgm, nH, nW, taille_imagette);
+            ecrire_image_pgm(const_cast<char*>(image_decoupe_pgm.c_str()), ImgOut_pgm, nH, nW);
+        }
 
         cout << "Génération de l'image mosaïque (PGM)" << endl;
         start_time = chrono::steady_clock::now();
