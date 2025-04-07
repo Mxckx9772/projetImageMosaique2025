@@ -913,18 +913,49 @@ double PSNR_ppm(OCTET* img1, OCTET* img2, int nH, int nW) {
 
 
 // Main pour effectuer toutes les étapes de génération de l'image mosaïque :
-int main()
+int main(int argc, char* argv[])
 {
     OCTET *ImgIn_ppm, *ImgOut_ppm, *ImgIn_pgm, *ImgOut_pgm, *ImgOut2;
     string ImgInName, ImgOutName, critere, ImgExt;
-    int nH, nW, nTaille, taille_imagette;
+    int nH, nW, nTaille, taille_imagette = 0;
     bool continuer = true;
-    unordered_map<string,unordered_map<string, vector<double>>> base_images_ppm;
-    unordered_map<string,unordered_map<string, vector<double>>> base_images_pgm;
+    unordered_map<string, unordered_map<string, vector<double>>> base_images_ppm;
+    unordered_map<string, unordered_map<string, vector<double>>> base_images_pgm;
+    vector criteres_possibles{'0', '1'};
+    vector tailles_possibles{4, 8, 16, 32, 64, 128};
+
+    if (argc == 4) {
+        char ImgInName_c[1024], critere_c[1];
+        sscanf(argv[1], "%s", critere_c);
+        critere = critere_c;
+        sscanf(argv[2], "%s", ImgInName_c);
+        ImgInName = ImgInName_c;
+        sscanf(argv[3], "%i", &taille_imagette);
+        if (find(criteres_possibles.begin(), criteres_possibles.end(), *critere_c) == criteres_possibles.end()) {
+            cerr << "Le critère " << *critere_c << " n'existe pas." << endl;
+            exit(1);
+        }
+        if (ImgInName.size() < 5) {
+            cerr << "Nom de l'image trop court." << endl;
+            exit(1);
+        }
+        ImgExt = ImgInName.substr(ImgInName.size()-4);
+        if (ImgExt != ".ppm" && ImgExt != ".pgm" && !filesystem::exists(ImgInName)) {
+            cerr << "L'image n'existe pas ou n'est pas au format PGM ou PPM." << endl;
+            exit(1);
+        }
+        if (find(tailles_possibles.begin(), tailles_possibles.end(), taille_imagette) == tailles_possibles.end()) {
+            cerr << "La taille d'imagettes " << taille_imagette << " n'est pas disponible." << endl;
+            exit(1);
+        }
+    } else if (argc != 1) {
+        printf("Usage: <mode> <image> <taille_imagette>\n");
+        exit(1);
+    }
 
     cout << "Bienvenue dans cette aplication de génération d'images mosaïque" << endl;
-	filesystem::create_directories("out");
-	cout << "Chargement de la base d'images... " << endl;
+    filesystem::create_directories("out");
+    cout << "Chargement de la base d'images... " << endl;
     auto start_time = chrono::steady_clock::now();
 	generer_base_imagettes("in/base_images","out/imagettes_ppm");
     auto elapsed = chrono::duration_cast<chrono::seconds>(chrono::steady_clock::now() - start_time).count();
@@ -933,59 +964,66 @@ int main()
     cout << " - Chargement de la base terminé en : " << minutes << "m " << seconds << "s" << endl;
 
     do {
-        do {
-            cout << "Veuillez choisir un critère (0 : moyenne / 1 : distance d'histogramme) :" << endl;
-            cin >> critere;
-            if (critere == "0" || critere == "1")
-                break;
-            cout << "Le critère n'est pas valide." << endl;
-        } while (true);
-        // TODO refaire fonctionner les images PGM
-        do {
-            cout << "Veuillez donner une image à transformer en mosaïque (PPM ou PGM) :" << endl;
-            cin >> ImgInName;
-            ImgExt = ImgInName.substr(ImgInName.size()-4);
-            if ((ImgExt == ".ppm" || ImgExt == ".pgm") && filesystem::exists("./in/"+ImgInName))
-                break;
-            cout << "L'image n'existe pas." << endl;
-        } while (true);
+        if (critere.empty()) {
+            do {
+                cout << "Veuillez choisir un critère (0 : moyenne / 1 : distance d'histogramme) :" << endl;
+                cin >> critere;
+                if (critere == "0" || critere == "1")
+                    break;
+                cout << "Le critère n'est pas valide." << endl;
+            } while (true);
+        }
+        if (ImgInName.empty()) {
+            do {
+                cout << "Veuillez donner une image à transformer en mosaïque (PPM ou PGM) :" << endl;
+                cin >> ImgInName;
+                ImgExt = ImgInName.substr(ImgInName.size()-4);
+                if ((ImgExt == ".ppm" || ImgExt == ".pgm") && filesystem::exists("./in/"+ImgInName)) {
+                    ImgInName = "./in/"+ImgInName;
+                    break;
+                }
+                cout << "L'image n'existe pas." << endl;
+            } while (true);
+        }
         ImgOutName = ImgInName.substr(0, ImgInName.size()-4);
         if (ImgExt == ".pgm") {
-            lire_nb_lignes_colonnes_image_pgm(const_cast<char*>(("./in/"+ImgInName).c_str()), &nH, &nW);
+            lire_nb_lignes_colonnes_image_pgm(const_cast<char*>(ImgInName.c_str()), &nH, &nW);
             nTaille = nH * nW;
             allocation_tableau(ImgIn_pgm, OCTET, nTaille);
-            lire_image_pgm(const_cast<char*>(("./in/"+ImgInName).c_str()), ImgIn_pgm, nTaille);
+            lire_image_pgm(const_cast<char*>(ImgInName.c_str()), ImgIn_pgm, nTaille);
         } else {
-            lire_nb_lignes_colonnes_image_ppm(const_cast<char*>(("./in/"+ImgInName).c_str()), &nH, &nW);
+            lire_nb_lignes_colonnes_image_ppm(const_cast<char*>(ImgInName.c_str()), &nH, &nW);
             nTaille = nH * nW;
             allocation_tableau(ImgIn_ppm, OCTET, nTaille*3);
-            lire_image_ppm(const_cast<char*>(("./in/"+ImgInName).c_str()), ImgIn_ppm, nTaille);
+            lire_image_ppm(const_cast<char*>(ImgInName.c_str()), ImgIn_ppm, nTaille);
         }
 
-        vector tailles_imagettes{4, 8, 16, 32, 64, 128};
-        vector<int> tailles_imagettes_reco = choix_taille_imagette(nW);
-        vector<int> tailles_imagettes_possible;
-        cout << "Tailles d'imagettes recommandées : " << endl;
-        vector<string> tailles_imagettes_str = {" - hautes qualité : "," - moyennes qualité : "," - basse qualité : "};
-        for (int i=0; i < tailles_imagettes_reco.size(); i++) {
-            cout << tailles_imagettes_str[i] << tailles_imagettes_reco[i] << endl;
-            tailles_imagettes_possible.push_back(tailles_imagettes_reco[i]);
-        }
-        cout << "Autre tailles possible : ";
-        for (int taille_imagettes : tailles_imagettes)
-            if (find(tailles_imagettes_reco.begin(), tailles_imagettes_reco.end(), taille_imagettes) == tailles_imagettes_reco.end()
-                    && taille_imagettes <= nW) {
-                cout << taille_imagettes << " ";
-                tailles_imagettes_possible.push_back(taille_imagettes);
+        if (!taille_imagette) {
+            vector tailles_imagettes{4, 8, 16, 32, 64, 128};
+            vector<int> tailles_imagettes_reco = choix_taille_imagette(nW);
+            vector<int> tailles_imagettes_possible;
+            cout << "Tailles d'imagettes recommandées : " << endl;
+            vector<string> tailles_imagettes_str = {" - hautes qualité : "," - moyennes qualité : "," - basse qualité : "};
+            for (int i=0; i < tailles_imagettes_reco.size(); i++) {
+                cout << tailles_imagettes_str[i] << tailles_imagettes_reco[i] << endl;
+                tailles_imagettes_possible.push_back(tailles_imagettes_reco[i]);
             }
-        cout << endl;
-        do {
-            cout << "Veuillez choisir une taille d'imagette : " << endl;
-            cin >> taille_imagette;
-            if (find(tailles_imagettes_possible.begin(), tailles_imagettes_possible.end(), taille_imagette) != tailles_imagettes_possible.end())
-                break;
-            cout << "La taille d'imagette n'est pas valide." << endl;
-        } while (true);
+            cout << "Autre tailles possible : ";
+            for (int taille_imagettes : tailles_imagettes)
+                if (find(tailles_imagettes_reco.begin(), tailles_imagettes_reco.end(), taille_imagettes) == tailles_imagettes_reco.end()
+                        && taille_imagettes <= nW) {
+                    cout << taille_imagettes << " ";
+                    tailles_imagettes_possible.push_back(taille_imagettes);
+                }
+            cout << endl;
+            do {
+                cout << "Veuillez choisir une taille d'imagette : " << endl;
+                cin >> taille_imagette;
+                if (find(tailles_imagettes_possible.begin(), tailles_imagettes_possible.end(), taille_imagette) != tailles_imagettes_possible.end())
+                    break;
+                cout << "La taille d'imagette n'est pas valide." << endl;
+            } while (true);
+        }
 
         if (ImgExt == ".pgm")
             redimensionner_image(ImgIn_pgm, nH,nW, taille_imagette);
@@ -995,9 +1033,9 @@ int main()
         if (nTaille != nH * nW) {
             nTaille = nH * nW;
             if (ImgExt == ".pgm")
-                ecrire_image_pgm(const_cast<char*>(("./out/"+ImgOutName+"_redim.pgm").c_str()), ImgIn_pgm, nH, nW);
+                ecrire_image_pgm(const_cast<char*>((ImgOutName+"_redim.pgm").c_str()), ImgIn_pgm, nH, nW);
             else
-                ecrire_image_ppm(const_cast<char*>(("./out/"+ImgOutName+"_redim.ppm").c_str()), ImgIn_ppm, nH, nW);
+                ecrire_image_ppm(const_cast<char*>((ImgOutName+"_redim.ppm").c_str()), ImgIn_ppm, nH, nW);
         }
         if (ImgExt == ".pgm") {
             allocation_tableau(ImgOut_pgm, OCTET, nTaille);
@@ -1024,12 +1062,12 @@ int main()
         if (critere == "0") {
             if (ImgExt == ".pgm") {
                 cout << "Découpe de l'image en grille (PGM)" << endl;
-                string image_decoupe_pgm = "out/"+ImgOutName+"_decoupe.pgm";
+                string image_decoupe_pgm = ImgOutName+"_decoupe.pgm";
                 decoupe_pgm(ImgIn_pgm, ImgOut_pgm, nH, nW, taille_imagette);
                 ecrire_image_pgm(const_cast<char*>(image_decoupe_pgm.c_str()), ImgOut_pgm, nH, nW);
             } else {
                 cout << "Découpe de l'image en grille (PPM)" << endl;
-                string image_decoupe = "out/"+ImgOutName+"_decoupe.ppm";
+                string image_decoupe = ImgOutName+"_decoupe.ppm";
                 decoupe_ppm(ImgIn_ppm, ImgOut_ppm, nH, nW, taille_imagette);
                 ecrire_image_ppm(const_cast<char*>(image_decoupe.c_str()), ImgOut_ppm, nH, nW);
             }
@@ -1042,7 +1080,7 @@ int main()
                 generationImage_pgm_moyenne(ImgOut_pgm, ImgOut_pgm, nH, nW, taille_imagette, base_images_pgm);
             else
                 generationImage_pgm_histo(ImgIn_pgm, ImgOut_pgm, nH, nW, taille_imagette, base_images_pgm);
-            string image_mosaique_pgm = "out/"+ImgOutName+"_mosaique.pgm";
+            string image_mosaique_pgm = ImgOutName+"_mosaique.pgm";
             ecrire_image_pgm(const_cast<char*>(image_mosaique_pgm.c_str()), ImgOut_pgm, nH, nW);
             elapsed = chrono::duration_cast<chrono::seconds>(chrono::steady_clock::now() - start_time).count();
             minutes = static_cast<int>(elapsed / 60);
@@ -1051,7 +1089,7 @@ int main()
         } else {
             cout << "Génération de l'image mosaïque (PPM)" << endl;
             start_time = chrono::steady_clock::now();
-            string image_mosaique_ppm = "out/"+ImgOutName+"_mosaique.ppm";
+            string image_mosaique_ppm = ImgOutName+"_mosaique.ppm";
             if (critere == "0")
                 generationImage_ppm_moyenne(ImgOut_ppm, ImgOut2, nH, nW, taille_imagette, base_images_ppm);
             else
@@ -1077,10 +1115,16 @@ int main()
             cout << " - PSNR : " << psnr_ppm << endl;
         }
 
-        // cout << "Voulez-vous continuer ? [O/n]" << endl;
-        // string reponse;
-        // cin >> reponse;
-        // if (reponse=="n" || reponse=="N" || reponse=="non" || reponse=="Non")
+        if (argc == 1) {
+            cout << "Voulez-vous continuer ? [O/n]" << endl;
+            string reponse;
+            cin >> reponse;
+            critere = "";
+            ImgInName = "";
+            taille_imagette = 0;
+            if (reponse=="n" || reponse=="N" || reponse=="non" || reponse=="Non")
+                continuer = false;
+        } else
             continuer = false;
     } while (continuer);
 
