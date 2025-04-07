@@ -15,7 +15,7 @@ using namespace std;
 
 size_t BLOCK_SIZE = 8;
 size_t STICKER_SIZE = 128;
-const char* LIB_PATH = "ppm";
+const char* LIB_PATH = "pgm";
 size_t LIB_SIZE = 20580;
 
 void getPathList(const char *folder, vector<char*> *files) {
@@ -44,7 +44,8 @@ void getPathList(const char *folder, vector<char*> *files) {
 
 int main(int argc, char** argv){
     char imgPath[250];
-    ImagePPM img, stickerPPM;
+    ImagePPM stickerPPM;
+    ImagePGM img, stickerPGM;
     size_t newWidth, newHeight, percent, currentPercent, maxDim;
     string stickerName;
     vector<char*> library;
@@ -86,11 +87,12 @@ int main(int argc, char** argv){
     cout << "Préparation de la librairie d'image..." << endl;
     start = clock();
     for(size_t i = 0; i < LIB_SIZE; i++){
-        string stickerName = string(LIB_PATH) + string("/") + to_string(i) + string(".ppm");
+        string stickerName = string(LIB_PATH) + string("/") + to_string(i) + string(".pgm");
         stickerPPM.read(library[i]);
         stickerPPM.resize(STICKER_SIZE, STICKER_SIZE);
 
-        stickerPPM.write(stickerName.data());
+        stickerPGM = stickerPPM.toPGM();
+        stickerPGM.write(stickerName.data(), to_string(stickerPGM.average()).data());
 
         currentPercent = (((float) i / (float) LIB_SIZE) * 100.0);
 
