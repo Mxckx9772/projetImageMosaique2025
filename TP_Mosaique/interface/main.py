@@ -23,7 +23,6 @@ def choose_image():
         file_label.config(text="Veuillez choisir une image à transformer en mosaïque")
 
 def transform():
-    # TODO implémenter les arguments du côté C++
     if dropdown_var_mode.get() == modes[0]:
         mode = "0"
     else:
