@@ -3,10 +3,11 @@
 
 #include "Image.hpp"
 #include "ImagePGM.hpp"
+#include "Color.hpp"
 
 class ImagePPM : public Image {
     private:
-        octet* colors;
+        Color* colors;
 
     public:
         /* Constructeurs et destructeurs */
@@ -15,11 +16,11 @@ class ImagePPM : public Image {
         ~ImagePPM() override;
 
         /* Opérateur d'accès */
-        octet* operator[] (size_t i) override;
+        Color* operator[] (size_t i);
 
         void operator= (const ImagePPM &other);
         ImagePGM toPGM();
-        octet average() override;
+        Color average();
 
         /* Setter */
         void resize(size_t newWidth, size_t newHeight) override;

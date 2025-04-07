@@ -8,6 +8,7 @@ obj/
 bin/
 img/
 pgm/
+ppm/
 *.o
 *.pgm
 *.ppm

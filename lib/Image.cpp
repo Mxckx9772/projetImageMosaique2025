@@ -30,14 +30,6 @@ size_t Image::size() {
     return (width * height);
 }
 
-octet* Image::operator[] (size_t i){
-    return nullptr;
-} // Opérateur virtuel
-
-octet Image::average() {
-    return 0;
-};
-
 /* Setter virtuel */
 void Image::resize(size_t newWidth, size_t newHeight) {
     width = newWidth;

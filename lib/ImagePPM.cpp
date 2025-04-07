@@ -1,86 +1,77 @@
+// Fonction et methode de la class PPM
 #include "../include/ImagePPM.hpp"
 #include <stdlib.h>
 #include <iostream>
+#include <string>
 
 using namespace std;
 
-/* Constructeur et destructeurs */
+/* Constructeurs et destructeurs */
 ImagePPM::ImagePPM() : Image(), colors(nullptr) {}
 
 ImagePPM::ImagePPM(size_t newWidth, size_t newHeight) : Image(newWidth, newHeight) {
-    colors = (octet *)calloc(width * height * 3, sizeof(octet));
+    colors = new Color[size()];
 }
 
 ImagePPM::~ImagePPM() {
-    free(colors);
+    delete[] colors;
 }
 
 /* Opérateur d'accès */
-octet *ImagePPM::operator[](size_t i) {
+Color *ImagePPM::operator[](size_t i) {
     if (i < height)
     {
-        return colors + (i * width * 3);
+        return colors + (i * width);
     }
 
     cerr << "Indices hors des bornes." << endl;
     exit(EXIT_FAILURE);
 }
 
-ImagePGM ImagePPM::toPGM() {
-    octet* grey  = (octet*) calloc(size(), sizeof(octet));
-
-    for(size_t i = 0; i < size() * 3; i++){
-        grey[i / 3] = 0.299 * ((float) colors[i]) + 0.587 * ((float) colors[i + 1]) + 0.114 * ((float) colors[i + 2]);
-    }
-
-    ImagePGM img(width, height);
-
-    for(size_t i = 0; i < height; i++){
-        for(size_t j = 0; j < width; j++){
-            img[i][j] = grey[(i * width) + j];
-        }
-    }
-
-    return img;
-}
-
-octet ImagePPM::average() {
-    ImagePGM pgm = toPGM();
-    octet avr = pgm.average();
-
-    delete &pgm;
-    return avr;
-}
-
 void ImagePPM::operator= (const ImagePPM &other) {
     width = other.width;
     height = other.height;
 
-    colors = (octet *) calloc(size() * 3, sizeof(octet));
-    for(size_t i = 0; i < size() * 3; i++){
+    colors = (Color *) calloc(size(), sizeof(Color));
+    for(size_t i = 0; i < size(); i++){
         colors[i] = other.colors[i];
     }
 }
 
+ImagePGM ImagePPM::toPGM() {
+    ImagePGM pgmImage(width, height);
+    for (size_t i = 0; i < height; ++i) {
+        for (size_t j = 0; j < width; ++j) {
+            pgmImage[i][j] = (octet)((colors[i * width + j][0] + colors[i * width + j][1] + colors[i * width + j][2]) / 3.0f);
+        }
+    }
+    return pgmImage;
+}
+
+Color ImagePPM::average() {
+    Color avgColor(0.0f, 0.0f, 0.0f);
+    for (size_t i = 0; i < size(); ++i) {
+        avgColor += colors[i];
+    }
+    avgColor /= (float)size();
+    return avgColor;
+}
+
 /* Setter */
 void ImagePPM::resize(size_t newWidth, size_t newHeight) {
-    if ((width != newWidth) || (height != newHeight))
-    {
+    if (((width != newWidth) || (height != newHeight)) && (width != 0 && height != 0) && (newWidth != 0 && newHeight != 0)) {
         size_t newSize;
-        octet *newcolors;
+        Color* newColors;
 
-        newSize = newWidth * newHeight * 3;
-        newcolors = (octet *)calloc(newSize, sizeof(octet));
+        newSize = newWidth * newHeight;
+        newColors = new Color[newSize];
 
-        if (newcolors != NULL)
-        {
+        if (newColors != nullptr) {
             float widthRatio = (float)(width - 1) / (float)(newWidth - 1);
             float heightRatio = (float)(height - 1) / (float)(newHeight - 1);
 
-            for (size_t y = 0; y < newHeight; ++y)
-            {
-                for (size_t x = 0; x < newWidth; ++x)
-                {
+            for (size_t y = 0; y < newHeight; ++y) {
+                for (size_t x = 0; x < newWidth; ++x) {
                     float srcX = x * widthRatio;
                     float srcY = y * heightRatio;
 
@@ -92,24 +83,23 @@ void ImagePPM::resize(size_t newWidth, size_t newHeight) {
                     float xWeight = srcX - x1;
                     float yWeight = srcY - y1;
 
-                    for(int color = 0; color < 3; color++){
+                    Color topLeft = colors[y1 * width + x1];
+                    Color topRight = colors[y1 * width + x2];
+                    Color bottomLeft = colors[y2 * width + x1];
+                    Color bottomRight = colors[y2 * width + x2];
 
-                        octet topLeft = colors[(y1 * width + x1) * 3 + color];
-                        octet topRight = colors[(y1 * width + x2) * 3 + color];
-                        octet bottomLeft = colors[(y2 * width + x1) * 3 + color];
-                        octet bottomRight = colors[(y2 * width + x2) * 3 + color];
+                    Color top = topLeft * (1 - xWeight) + topRight * xWeight;
+                    Color bottom = bottomLeft * (1 - xWeight) + bottomRight * xWeight;
 
-                        float top = topLeft * (1 - xWeight) + topRight * xWeight;
-                        float bottom = bottomLeft * (1 - xWeight) + bottomRight * xWeight;
-
-                        newcolors[(y * newWidth + x) * 3 + color] = (top * (1 - yWeight) + bottom * yWeight);
-                    }
+                    newColors[y * newWidth + x] = top * (1 - yWeight) + bottom * yWeight;
                 }
             }
 
-            free(colors);
+            
+            delete[] colors;
+            
             Image::resize(newWidth, newHeight);
-            colors = newcolors;
+            colors = newColors;
         }
     }
 }
@@ -122,7 +112,7 @@ void ImagePPM::segment(size_t newBlockSize) {
     }
 
     size_t newWidth, newHeight;
-    float average[3];
+    Color averageColor;
     size_t squarednewBlockSize = newBlockSize * newBlockSize;
 
     newWidth = newBlockSize * (width / newBlockSize);
@@ -130,47 +120,106 @@ void ImagePPM::segment(size_t newBlockSize) {
 
     resize(newWidth, newHeight);
 
-    for (size_t i = 0; i < height; i += newBlockSize)
-    {
-        for (size_t j = 0; j < width; j += newBlockSize)
-        {
-            average[0] = 0.0f;
-            average[1] = 0.0f;
-            average[2] = 0.0f;
-
-            for (size_t x = 0; x < newBlockSize; x++)
-            {
-                for (size_t y = 0; y < newBlockSize; y++)
-                {
-                    average[0] += colors[((i + x) * width + (j + y)) * 3 + 0];
-                    average[1] += colors[((i + x) * width + (j + y)) * 3 + 1];
-                    average[2] += colors[((i + x) * width + (j + y)) * 3 + 2];
+    for (size_t i = 0; i < height; i += newBlockSize) {
+        for (size_t j = 0; j < width; j += newBlockSize) {
+            averageColor = Color(0.0f, 0.0f, 0.0f);
+            for (size_t x = 0; x < newBlockSize; x++) {
+                for (size_t y = 0; y < newBlockSize; y++) {
+                    averageColor += colors[((i + x) * width) + (j + y)];
                 }
             }
+            averageColor /= (float) squarednewBlockSize;
 
-            average[0] /= squarednewBlockSize;
-            average[1] /= squarednewBlockSize;
-            average[2] /= squarednewBlockSize;
-
-            for (size_t x = 0; x < newBlockSize; x++)
-            {
-                for (size_t y = 0; y < newBlockSize; y++)
-                {
-                    colors[((i + x) * width + (j + y)) * 3 + 0] = average[0];
-                    colors[((i + x) * width + (j + y)) * 3 + 1] = average[1];
-                    colors[((i + x) * width + (j + y)) * 3 + 2] = average[2];
+            for (size_t x = 0; x < newBlockSize; x++) {
+                for (size_t y = 0; y < newBlockSize; y++) {
+                    colors[((i + x) * width) + (j + y)] = averageColor;
                 }
             }
         }
     }
 }
 
-void ImagePPM::mosaic(size_t blockSize, const char* libPath, size_t libSize) {}
+void ImagePPM::mosaic(size_t blockSize, const char* libPath, size_t libSize) {
+    size_t widthFactor, heightFactor, nbBlock;
+    size_t newWidth, newHeight;
+    Color *newColors, currentDist, minDist;
+    string currentName, name;
+    size_t currentPercent, percent;
+    ImagePPM sticker;
+
+    widthFactor = width / blockSize;
+    heightFactor = height / blockSize;
+    nbBlock = widthFactor * heightFactor;
+
+    newWidth = blockSize * widthFactor;
+    newHeight = blockSize * heightFactor;
+
+    resize(newWidth, newHeight);
+    segment(blockSize);
+
+    newColors = new Color[size()];
+
+    size_t blockRow, blockCol;
+    size_t index;
+    percent = 0;
+    for (size_t blockId = 0; blockId < nbBlock; blockId++) {
+
+        blockRow = blockId / widthFactor;
+        blockCol = blockId % widthFactor;
+        minDist = Color(255.0f, 255.0f, 255.0f); // Initialize with max possible values
+
+        for(size_t i = 0; i < libSize; i++) {
+            currentName = (string(libPath) + "/" + to_string(i) + ".ppm");
+            sticker.read(currentName.data());
+            sticker.resize(blockSize, blockSize);
+
+            index = (blockRow * blockSize) * width + (blockCol * blockSize);
+            Color blockAverage = Color(0.0f, 0.0f, 0.0f);
+            for(size_t y = 0; y < blockSize; ++y) {
+                for(size_t x = 0; x < blockSize; ++x) {
+                    blockAverage += colors[index + y * width + x];
+                }
+            }
+            blockAverage /= (float)(blockSize * blockSize);
+
+            Color stickerAverage = sticker.average();
+            Color distance = Color(abs(stickerAverage[0] - blockAverage[0]),
+                                   abs(stickerAverage[1] - blockAverage[1]),
+                                   abs(stickerAverage[2] - blockAverage[2]));
+
+            if (distance.squaredNorm() < minDist.squaredNorm()) {
+                minDist = distance;
+                name = currentName;
+            }
+        }
+        sticker.read(name.data());
+        sticker.resize(blockSize, blockSize);
+
+        for (size_t i = 0; i < blockSize; i++) {
+            for (size_t j = 0; j < blockSize; j++) {
+                index = (blockRow * blockSize + i) * width + (blockCol * blockSize + j);
+                newColors[index] = sticker[i][j];
+            }
+        }
+
+        currentPercent = (((float) blockId / (float) nbBlock) * 100.0);
+
+        if(currentPercent != percent || blockId == 0) {
+            percent = currentPercent;
+            cout << "[" << percent << "%]" << endl;
+        }
+
+    }
+    cout << "[100%]" << endl;
+
+    delete[] colors;
+    colors = newColors;
+}
 
 size_t *ImagePPM::swap(size_t blockSize) {
     size_t widthFactor, heightFactor, nbBlock;
     size_t newWidth, newHeight;
-    octet *newcolors;
+    Color *newColors;
     size_t *key;
 
     widthFactor = width / blockSize;
@@ -183,7 +232,7 @@ size_t *ImagePPM::swap(size_t blockSize) {
     resize(newWidth, newHeight);
 
     key = (size_t *) calloc(nbBlock, sizeof(size_t));
-    newcolors = (octet *) calloc(size() * 3, sizeof(octet));
+    newColors = new Color[size()];
 
     for (size_t i = 0; i < nbBlock; i++) {
         key[i] = i;
@@ -198,6 +247,7 @@ size_t *ImagePPM::swap(size_t blockSize) {
         key[j] = temp;
     }
 
+
     size_t blockRow, blockCol, swappedBlockRow, swappedBlockCol;
     size_t index, swappedIndex;
     size_t swappedBlockId;
@@ -215,28 +265,25 @@ size_t *ImagePPM::swap(size_t blockSize) {
                 index = (swappedBlockRow * blockSize + i) * width + (swappedBlockCol * blockSize + j);
                 swappedIndex = (blockRow * blockSize + i) * width + (blockCol * blockSize + j);
 
-                for(int color = 0; color < 3; color++){
-                    newcolors[(index * 3) + color] = colors[(swappedIndex * 3) + color];
-                }
-
+                newColors[index] = colors[swappedIndex];
             }
         }
     }
 
-    free(colors);
-    colors = newcolors;
+    delete[] colors;
+    colors = newColors;
     return key;
 }
 
 void ImagePPM::sort(size_t *key, size_t blockSize) {
     size_t widthFactor, heightFactor, nbBlock;
-    octet *newcolors;
+    Color *newColors;
 
     widthFactor = width / blockSize;
     heightFactor = height / blockSize;
     nbBlock = widthFactor * heightFactor;
 
-    newcolors = (octet *) calloc(size() * 3, sizeof(octet));
+    newColors = new Color[size()];
 
     size_t blockRow, blockCol, swappedBlockRow, swappedBlockCol;
     size_t index, swappedIndex;
@@ -255,23 +302,20 @@ void ImagePPM::sort(size_t *key, size_t blockSize) {
                 index = (swappedBlockRow * blockSize + i) * width + (swappedBlockCol * blockSize + j);
                 swappedIndex = (blockRow * blockSize + i) * width + (blockCol * blockSize + j);
 
-                for(int color = 0; color < 3; color++){
-                    newcolors[(swappedIndex * 3) + color] = colors[(index * 3) + color];
-                }
+                newColors[swappedIndex] = colors[index];
             }
         }
     }
 
-    free(colors);
-    colors = newcolors;
+    delete[] colors;
+    colors = newColors;
 }
 
 /* Lecture et écriture dans un fichier */
 void ImagePPM::read(const char *path) {
     FILE *file;
     char format[3], c;
-    octet maxValue;
-    size_t size;
+    octet maxValue, color[3];
 
     /* Ouverture du fichier */
     file = fopen(path, "rb");
@@ -299,39 +343,45 @@ void ImagePPM::read(const char *path) {
 
     /* Ignorer les commentaires */
     fgetc(file); // Ignorer le \n
-    while ((c = fgetc(file)) == '#')
-    {
-        while ((c = fgetc(file)) != '\n')
-        {
+    while ((c = fgetc(file)) == '#'){
+        while ((c = fgetc(file)) != '\n'){
+
         }
     }
 
     ungetc(c, file); // Rejeter le caractère en trop
 
     /* Lecture des dimensions */
-    fscanf(file, "%ld %ld %hhd", &width, &height, &maxValue);
+    if (fscanf(file, "%ld %ld %hhd", &width, &height, &maxValue) != 3) {
+        cerr << "Erreur - Lecture des dimensions impossible" << endl;
+        fclose(file);
+        exit(EXIT_FAILURE);
+    }
     fgetc(file); // Ignorer le saut de ligne
 
     if (maxValue != 255)
     {
-        cerr << "Erreur - Valeur maximal éronée" << endl;
+        cerr << "Erreur - Valeur maximale éronée" << endl;
         fclose(file);
         exit(EXIT_FAILURE);
     }
 
-    size = width * height * 3;
+    delete[] colors;
+    colors = new Color[size()];
 
-    free(colors);
+    /* Lecture des valeurs des couleurs */
+    for (size_t i = 0; i < size(); i++) {
+        
+        if (fread(color, sizeof(octet), 3, file) != 3) {
+            cerr << "Erreur - Problème lors de la lecture des valeurs des couleurs" << endl;
+            delete[] colors;
+            fclose(file);
+            exit(EXIT_FAILURE);
+        }
 
-    /* Lecture des valeurs */
-    colors = (octet *)calloc(size, sizeof(octet));
-
-    if (fread(colors, sizeof(octet), size, file) != size)
-    {
-        cerr << "Erreur - Problème lors de la lecture des valeurs" << endl;
-        free(colors);
-        fclose(file);
-        exit(EXIT_FAILURE);
+        colors[i][0] = color[0];
+        colors[i][1] = color[1];
+        colors[i][2] = color[2];                                                                                             
     }
 
     fclose(file);
@@ -339,10 +389,9 @@ void ImagePPM::read(const char *path) {
 
 void ImagePPM::write(const char *path, const char *comment) {
     FILE *file;
-    size_t size;
-    size = width * height * 3;
+    octet color[3];
 
-    /* Ouveture du fichier */
+    /* Ouverture du fichier */
     file = fopen(path, "wb");
     if (file == NULL)
     {
@@ -351,7 +400,7 @@ void ImagePPM::write(const char *path, const char *comment) {
     }
 
     /* Ecriture du format */
-    fprintf(file, "P6\r");
+    fprintf(file, "P6\n");
 
     /* Ecriture des commentaires */
     if (comment)
@@ -361,15 +410,17 @@ void ImagePPM::write(const char *path, const char *comment) {
     }
 
     /* Ecriture des dimensions */
-    fprintf(file, "%ld %ld\r255\r", width, height);
+    fprintf(file, "%ld %ld\n255\n", width, height);
 
-    /* Ecriture des valeurs */
-    if (fwrite(colors, sizeof(octet), size, file) != size)
-    {
-        cerr << "Erreur - Problème lors de l'écriture de l'image" << endl;
-        fclose(file);
-        exit(EXIT_FAILURE);
+    /* Ecriture des valeurs des couleurs */
+    for (size_t i = 0; i < size(); ++i) {
+        for (size_t j = 0; j < 3; j++){
+            color[j] = (octet) colors[i][j];
+        }
+
+        fwrite(color, sizeof(octet), 3, file);
     }
+    
 
     fclose(file);
 }

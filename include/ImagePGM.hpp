@@ -15,10 +15,10 @@ class ImagePGM : public Image {
         ~ImagePGM() override;
 
         /* Opérateur d'accès */
-        octet* operator[] (size_t i) override;
+        octet* operator[] (size_t i);
 
         void operator= (const ImagePGM &other);
-        octet average() override;
+        octet average();
 
 
         /* Setter */

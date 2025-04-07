@@ -23,8 +23,6 @@ class Image {
         size_t getWidth();
         size_t getHeight();
         size_t size();
-        virtual octet* operator[] (size_t i); // Opérateur virtuel
-        virtual octet average();
 
         /* Setter virtuel */
         virtual void resize(size_t newWidth, size_t newHeight);
