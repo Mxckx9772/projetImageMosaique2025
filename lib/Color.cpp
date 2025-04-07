@@ -24,9 +24,20 @@ Color::Color(float r, float g, float b) {
     _data[2] = b;
 };
 
-/*Color::~Color() {
+Color::Color(const Color &other) {
+    _data = (float*) malloc(DIM * sizeof(float));
+    if (_data == nullptr) {
+        std::cerr << "Erreur d'allocation mémoire dans le constructeur de copie de Color" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    _data[0] = other._data[0];
+    _data[1] = other._data[1];
+    _data[2] = other._data[2];
+}
+
+Color::~Color() {
     free(_data);
-}*/
+}
 
 /* Accesseur */
 float Color::operator [] (const size_t i) const {
@@ -45,6 +56,10 @@ float &Color::operator [] (const size_t i) {
     }
 
     return _data[i];
+}
+
+float* Color::data() {
+    return _data;
 }
 
 /* Norme */

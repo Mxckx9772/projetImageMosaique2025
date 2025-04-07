@@ -2,8 +2,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <string>
-#include <immintrin.h> // Include for AVX/SSE intrinsics
-#include <time.h>    // For clock_gettime
+#include <immintrin.h> // AVX/SSE
 #include <cstring>
 
 using namespace std;

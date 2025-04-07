@@ -26,11 +26,13 @@ class Color {
         Color();
         Color(float x);
         Color(float r, float g, float b);
-        //~Color();
+        Color(const Color &other);
+        ~Color();
 
         /* Accesseur */
         float operator [] (const size_t i) const;
         float &operator [] (const size_t i);
+        float* data();
 
         /* Norme */
         float norm() const;

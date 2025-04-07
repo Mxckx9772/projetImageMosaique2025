@@ -1,4 +1,3 @@
-// Fonction et methode de la class PPM
 #include "../include/ImagePPM.hpp"
 #include <stdlib.h>
 #include <iostream>
@@ -7,7 +6,7 @@
 using namespace std;
 
 /* Constructeurs et destructeurs */
-ImagePPM::ImagePPM() : Image(), colors(nullptr) {}
+ImagePPM::ImagePPM() : Image(), colors(new Color[0]) {}
 
 ImagePPM::ImagePPM(size_t newWidth, size_t newHeight) : Image(newWidth, newHeight) {
     colors = new Color[size()];
@@ -19,20 +18,19 @@ ImagePPM::~ImagePPM() {
 
 /* Opérateur d'accès */
 Color *ImagePPM::operator[](size_t i) {
-    if (i < height)
-    {
-        return colors + (i * width);
+    if (i >= height) {
+        cerr << "Indices hors des bornes." << endl;
+        exit(EXIT_FAILURE);
     }
-
-    cerr << "Indices hors des bornes." << endl;
-    exit(EXIT_FAILURE);
+    return colors + (i * width);
 }
 
 void ImagePPM::operator= (const ImagePPM &other) {
     width = other.width;
     height = other.height;
 
-    colors = (Color *) calloc(size(), sizeof(Color));
+    delete [] colors;
+    colors = new Color[size()];
     for(size_t i = 0; i < size(); i++){
         colors[i] = other.colors[i];
     }
@@ -50,10 +48,12 @@ ImagePGM ImagePPM::toPGM() {
 
 Color ImagePPM::average() {
     Color avgColor(0.0f, 0.0f, 0.0f);
+
     for (size_t i = 0; i < size(); ++i) {
         avgColor += colors[i];
     }
-    avgColor /= (float)size();
+
+    avgColor /= (float) size();
     return avgColor;
 }
 
@@ -62,13 +62,14 @@ void ImagePPM::resize(size_t newWidth, size_t newHeight) {
     if (((width != newWidth) || (height != newHeight)) && (width != 0 && height != 0) && (newWidth != 0 && newHeight != 0)) {
         size_t newSize;
         Color* newColors;
+        float widthRatio, heightRatio;
 
         newSize = newWidth * newHeight;
         newColors = new Color[newSize];
 
         if (newColors != nullptr) {
-            float widthRatio = (float)(width - 1) / (float)(newWidth - 1);
-            float heightRatio = (float)(height - 1) / (float)(newHeight - 1);
+            widthRatio = (float)(width - 1) / (float)(newWidth - 1);
+            heightRatio = (float)(height - 1) / (float)(newHeight - 1);
 
             for (size_t y = 0; y < newHeight; ++y) {
                 for (size_t x = 0; x < newWidth; ++x) {
@@ -89,7 +90,7 @@ void ImagePPM::resize(size_t newWidth, size_t newHeight) {
                     Color bottomRight = colors[y2 * width + x2];
 
                     Color top = topLeft * (1 - xWeight) + topRight * xWeight;
-                    Color bottom = bottomLeft * (1 - xWeight) + bottomRight * xWeight;
+                    Color bottom = bottomLeft * (1 - xWeight) + bottomRight * xWeight; // j'usque ici
 
                     newColors[y * newWidth + x] = top * (1 - yWeight) + bottom * yWeight;
                 }
@@ -206,11 +207,11 @@ void ImagePPM::mosaic(size_t blockSize, const char* libPath, size_t libSize) {
 
         if(currentPercent != percent || blockId == 0) {
             percent = currentPercent;
-            cout << "[" << percent << "%]" << endl;
+            printPercent(percent);
         }
 
     }
-    cout << "[100%]" << endl;
+    printPercent(100);
 
     delete[] colors;
     colors = newColors;
