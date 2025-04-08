@@ -7,22 +7,27 @@
 
 class ImagePPM : public Image {
     private:
-        Color* colors;
+        octet* pixels;
 
     public:
         /* Constructeurs et destructeurs */
         ImagePPM();
         ImagePPM(size_t newWidth, size_t newHeight);
+        ImagePPM(const ImagePPM& other);
         ~ImagePPM() override;
 
         /* Opérateur d'accès */
         Color* operator[] (size_t i);
 
+        /* Accesseur */
+        Color getPixel(size_t i, size_t j) const;
+
         void operator= (const ImagePPM &other);
         ImagePGM toPGM();
-        Color average();
+        Color average() const;
 
         /* Setter */
+        void setPixel(size_t i, size_t j, const Color& color);
         void resize(size_t newWidth, size_t newHeight) override;
         void segment(size_t blockSize) override;
         void mosaic(size_t blockSize, const char* libPath, size_t libSize) override;

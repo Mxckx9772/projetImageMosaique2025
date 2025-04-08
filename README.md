@@ -15,11 +15,11 @@ Application utilisant la synthèse d'image mosaïque pour la sécurité et la pr
     ```bash
     git clone https://github.com/Mxckx9772/projetImageMosaique2025.git
     ```
-3.  Pour compiler le projet :
+3.  Pour compiler et lancer le projet :
 
     ```bash
     cd projetImageMosaique2025
-    make
+    make imgPath [imgInType(ppm|pgm)]* [blockSize]* [stickerSize]* [libSize]*
     ```
 
 **Références Bibliographiques**

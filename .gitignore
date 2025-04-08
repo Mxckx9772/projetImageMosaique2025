@@ -6,9 +6,9 @@
 # Ignorer les dossiers obj, bin et img
 obj/
 bin/
-img/
-pgm/
-ppm/
+img/*.pgm
+img/*.ppm
+pp_img/
 *.o
 *.pgm
 *.ppm

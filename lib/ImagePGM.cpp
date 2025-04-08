@@ -19,9 +19,8 @@ ImagePGM::~ImagePGM() {
 }
 
 /* Opérateur d'accès */
-octet *ImagePGM::operator[](size_t i) {
-    if (i < height)
-    {
+octet* ImagePGM::operator[](size_t i) {
+    if (i < height) {
         return grey + (i * width);
     }
 
@@ -479,7 +478,11 @@ void ImagePGM::read(const char *path) {
     ungetc(c, file); // Rejeter le caractère en trop
 
     /* Lecture des dimensions */
-    fscanf(file, "%ld %ld %hhd", &width, &height, &maxValue);
+    if (fscanf(file, "%ld %ld %hhd", &width, &height, &maxValue) != 3) {
+        cerr << "Erreur - Lecture des dimensions impossible" << endl;
+        fclose(file);
+        exit(EXIT_FAILURE);
+    }
     fgetc(file); // Ignorer le saut de ligne
 
     if (maxValue != 255)
