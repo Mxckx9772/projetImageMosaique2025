@@ -18,15 +18,15 @@ Image::~Image() {} // Destructeur virtuel
 
 
 /* Accesseur et opérateurs d'accès */
-size_t Image::getWidth() {
+size_t Image::getWidth() const {
     return width;
 }
 
-size_t Image::getHeight() {
+size_t Image::getHeight() const {
     return height;
 }
 
-size_t Image::size() {
+size_t Image::size() const {
     return (width * height);
 }
 

@@ -12,6 +12,8 @@ class ImagePGM : public Image {
         /* Constructeurs et destructeurs */
         ImagePGM();
         ImagePGM(size_t newWidth, size_t newHeight);
+        ImagePGM(size_t newWidth, size_t newHeight, octet* newGrey);
+        ImagePGM(const ImagePGM& other);
         ~ImagePGM() override;
 
         /* Opérateur d'accès */
@@ -19,7 +21,10 @@ class ImagePGM : public Image {
 
         void operator= (const ImagePGM &other);
         octet average();
+        float* histo() const;
 
+        /* Comparaison */
+        float bhattacharyyaDist(const ImagePGM& other) const;
 
         /* Setter */
         void resize(size_t newWidth, size_t newHeight) override;

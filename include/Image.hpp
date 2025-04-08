@@ -20,9 +20,9 @@ class Image {
         virtual ~Image(); // Destructeur virtuel
 
         /* Accesseurs et opérateurs d'accès */
-        size_t getWidth();
-        size_t getHeight();
-        size_t size();
+        size_t getWidth() const;
+        size_t getHeight() const;
+        size_t size() const;
 
         /* Setter virtuel */
         virtual void resize(size_t newWidth, size_t newHeight);
