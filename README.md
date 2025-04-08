@@ -19,7 +19,7 @@ Application utilisant la synthèse d'image mosaïque pour la sécurité et la pr
 
     ```bash
     cd projetImageMosaique2025
-    make imgPath [imgInType(ppm|pgm)]* [blockSize]* [stickerSize]* [libSize]*
+    make run imgPath [imgInType(ppm|pgm)]* [blockSize]* [stickerSize]* [libSize]*
     ```
 
 **Références Bibliographiques**
