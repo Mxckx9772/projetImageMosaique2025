@@ -600,15 +600,16 @@ vector<int> choix_taille_imagette(int nW) {
 
 // TODO problème avec les images couleurs
 vector<vector<double>> calc_histograms(OCTET* ImgIn, int nr_composantes,
-    int start_x, int start_y, int nH, int nW, int taille_imagette) {
+        int start_x, int start_y, int nH, int nW, int taille_imagette) {
     vector<vector<double>> histograms(nr_composantes);
     for (int i = 0; i < nr_composantes; i++) {
         histograms[i].resize(256);
         for (int y = 0; y < taille_imagette; y++)
-            for (int x = 0; x < taille_imagette; x+=nr_composantes)
+            for (int x = 0; x < taille_imagette; x+=i+1)
                 if (start_y + y < nH && start_x + x < nW)
-                    histograms[i][ImgIn[(start_y + y) * nW + (start_x + x) * nr_composantes + i]] ++;
+                    histograms[i][ImgIn[((start_y + y) * nW + (start_x + x)) * nr_composantes + i]] ++;
     }
+
     return histograms;
 }
 
@@ -880,7 +881,7 @@ double EQM_pgm(OCTET* img1, OCTET* img2, int nH, int nW) {
     eqm /= nH * nW * 3;
     return eqm;
     }
-    
+
 double PSNR_pgm(OCTET* img1, OCTET* img2, int nH, int nW) {
     double eqm = EQM_pgm(img1, img2, nH, nW);
     if (eqm == 0) {
