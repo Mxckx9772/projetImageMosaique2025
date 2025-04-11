@@ -138,7 +138,7 @@ int main(int argc, char** argv){
         end = clock();
         duration = ((end - start) / CLOCKS_PER_SEC) / 60.0;
         cout << "Temps de traitement de la mosaïque : " << fixed << setprecision(3) << duration << " min" << endl;
-        imgPGM.write("mosaic.pgm");
+        imgPGM.write("./out/mosaic.pgm");
 
     } else { // Default to PPM
         imgPPM.read(imgPath);
@@ -161,7 +161,7 @@ int main(int argc, char** argv){
         end = clock();
         duration = ((end - start) / CLOCKS_PER_SEC) / 60.0;
         cout << "Temps de traitement de la mosaïque : " << fixed << setprecision(3) << duration << " min" << endl;
-        imgPPM.write("mosaic.ppm");
+        imgPPM.write("./out/mosaic.ppm");
     }
 
     for (char* path : library) {
