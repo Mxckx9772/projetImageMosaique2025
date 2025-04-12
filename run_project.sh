@@ -21,5 +21,3 @@ if [ $? -ne 0 ]; then
     echo "Erreur lors du lancement de l'application Python !"
     exit 1
 fi
-
-echo "Application Python lancée avec succès."

@@ -26,3 +26,4 @@ out/
 base_images.txt
 TP_Mosaique/base_images_ppm.txt
 /base_images
+/venv

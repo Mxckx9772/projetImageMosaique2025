@@ -4,8 +4,7 @@ from tkinter import filedialog, Label
 from PIL import Image, ImageTk
 
 root = tk.Tk()
-root.title("Mosaïque d'images")
-root.geometry("500x700")
+root.title("Crypto Mosaic")
 root.configure(bg="#f0f0f0")
 
 modes = ["Moyenne", "Distance de Pearson", "Distance de Bhattacharyya"]
@@ -13,18 +12,16 @@ imagette_sizes = ["4", "8", "16", "32", "64", "128"]
 image_path = ""
 blocksizes =  ["4", "8", "16", "32", "64", "128"]
 
-#Affichage image
-def display_image(path, target_label, max_size=(300, 300)):
+def display_image(path, target_label, size):
     try:
         img = Image.open(path)
-        img.thumbnail(max_size)
+        img.thumbnail(size)
         img_tk = ImageTk.PhotoImage(img)
         target_label.configure(image=img_tk)
         target_label.image = img_tk
     except Exception as e:
         print(f"Erreur d'affichage de l'image : {e}")
 
-#Fenêtre d'affichage de l'image
 def show_image_in_new_window(image_path, title):
     image_window = tk.Toplevel(root)
     image_window.title(title)   
@@ -33,11 +30,12 @@ def show_image_in_new_window(image_path, title):
     img = Image.open(image_path)
     width, height = img.size
     aspect_ratio = width / height
-    initial_width = min(500, width) 
+    initial_width = 350
     initial_height = int(initial_width / aspect_ratio)
     image_window.geometry(f"{initial_width}x{initial_height}")
+    image_window.minsize(350, initial_height)
     image_window.resizable(True, True)
-    
+
     def update_image(event=None):
         if event is not None:
             new_width, new_height = event.width, event.height
@@ -45,18 +43,16 @@ def show_image_in_new_window(image_path, title):
                 new_width = int(new_height * aspect_ratio)
             else:
                 new_height = int(new_width / aspect_ratio)
-            display_image(image_path, image_label, max_size=(new_width, new_height))
+            display_image(image_path, image_label, size=(new_width, new_height))
     
     update_image()
     image_window.bind("<Configure>", update_image)
 
     def on_window_close():
-        print("Fermeture de la fenêtre de l'image.")
         image_window.destroy()
 
     image_window.protocol("WM_DELETE_WINDOW", on_window_close)
 
-# Choisir l'image
 def choose_image():
     global image_path
     image_path = filedialog.askopenfilename(
@@ -66,11 +62,9 @@ def choose_image():
     )
     if image_path:
         file_label.config(text=f"Image choisie : {image_path}")
-        show_image_in_new_window(image_path, image_path)
     else:
-        file_label.config(text="Veuillez choisir une image à transformer en mosaïque")
+        file_label.config(text="Veuillez choisir une image :")
 
-# Fonction de transformation de l'image
 def transform():
     selected_mode = modes.index(dropdown_var_mode.get())
     mode = str(selected_mode)
@@ -78,26 +72,23 @@ def transform():
     blocksize = str(current_bloc_size.get())
     libsize = str(LibSize_entry.get())
     img_extension = "ppm" if image_path.endswith(".ppm") else "pgm"
-    print(f"./bin/main {image_path} {img_extension} {blocksize} {imagette_size} {libsize}")
     os.system(f"./bin/main {image_path} {img_extension} {blocksize} {imagette_size} {libsize}")
     transformed_image_path = "./out/mosaic."+img_extension
     if os.path.exists(transformed_image_path):
-        print(transformed_image_path)
+        show_image_in_new_window(image_path, "Image originale")
         show_image_in_new_window(transformed_image_path, "Image transformée")
     else:
-        print(transformed_image_path)
         print("Erreur : l'image transformée n'a pas été trouvée.")
 
-#Widgets de l'interface
-file_label = Label(root, text="Veuillez choisir une image à transformer en mosaïque", wraplength=350,bg="#f0f0f0")
-file_label.pack(pady=20)
-
+# Widgets de l'interface
+file_label = Label(root, text="Veuillez choisir une image", wraplength=350,bg="#f0f0f0")
+file_label.pack(pady=10)
 choose_button = tk.Button(root, text="Choisir une image", command=choose_image, bg="#4CAF50", fg="white")
 choose_button.pack()
 
-#Mode de transformation
+# Mode de transformation
 mode_label = Label(root, text="Veuillez choisir un mode de transformation", wraplength=350, bg="#f0f0f0")
-mode_label.pack(pady=10)
+mode_label.pack(padx=20, pady=10)
 dropdown_var_mode = tk.StringVar(root)
 dropdown_var_mode.set(modes[0])
 dropdown_menu_mode = tk.OptionMenu(root, dropdown_var_mode, *modes)
@@ -107,7 +98,7 @@ dropdown_menu_mode.pack()
 
 #slider Imagettes
 size_label = Label(root, text="Veuillez choisir la taille des imagettes", wraplength=350, bg="#f0f0f0")
-size_label.pack(pady=20)
+size_label.pack(pady=10)
 current_imagette_size = tk.IntVar(value=16)
 
 # Fonction pour arrondir automatiquement à la valeur la plus proche autorisée
@@ -116,8 +107,6 @@ def snap_slider_value(val):
     closest = min(imagette_sizes, key=lambda x: abs(int(x) - val))
     current_imagette_size.set(closest)
     slider_imagette.set(closest)
-
-Label(root, text="Taille des imagettes", wraplength=350,bg="#f0f0f0").pack(pady=(10,0))
 
 slider_imagette = tk.Scale(
     root, 
@@ -130,10 +119,10 @@ slider_imagette = tk.Scale(
     bg="#f0f0f0",
     fg="black",
 )
-slider_imagette.pack(pady=5)
+slider_imagette.pack()
 
 bloc_label = Label(root, text="Veuillez choisir la taille des blocs", wraplength=350, bg="#f0f0f0")
-bloc_label.pack(pady=20)
+bloc_label.pack(pady=10)
 
 # Valeurs discrètes autorisées pour le slider
 current_bloc_size = tk.IntVar(value=16)
@@ -143,8 +132,6 @@ def snap_bloc_value(val):
     closest = min(blocksizes, key=lambda x: abs(int(x) - val))
     current_bloc_size.set(closest)
     slider_bloc.set(closest)
-
-Label(root, text="Taille des blocs", wraplength=350,bg="#f0f0f0").pack(pady=(10,0))
 
 slider_bloc = tk.Scale(
     root, 
@@ -157,12 +144,13 @@ slider_bloc = tk.Scale(
     bg="#f0f0f0",
     fg="black",
 )
-slider_bloc.pack(pady=10)
+slider_bloc.pack()
 
 # Choisir la taille de la bibliothèque
-LibSize_label = Label(root, text="Veuiller renseigner la taille de la bibliothèque", wraplength=350, bg="#f0f0f0").pack(pady=20)
+LibSize_label = Label(root, text="Veuiller renseigner la taille de la bibliothèque", wraplength=350, bg="#f0f0f0").pack(pady=10)
 LibSize_entry = tk.Entry(root, bg="#f0f0f0", fg="black")
-LibSize_entry.pack(pady=5)
+LibSize_entry.insert(0, '20580')
+LibSize_entry.pack()
 
 transform_button = tk.Button(root, text="Transformer l'image", command=transform, bg="#2196F3", fg="white").pack(pady=20)
 
