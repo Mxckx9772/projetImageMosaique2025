@@ -1,68 +1,77 @@
 #include "../include/Image.hpp"
 #include <iostream>
-#include <iomanip> 
+#include <iomanip>
 
-// Codes ANSI pour la couleur violette et le gras
+using namespace std;
+
+/* Définiton des couleurs */
+
 #define COLOR_VIOLET "\033[95m"
 #define BOLD "\033[1m"
 #define RESET "\033[0m"
 
-using namespace std;
 
-/* Constructeurs et destructeurs */
-Image::Image(): width(0), height(0) {}
+/* Constructeurs et desctructeurs */
 
-Image::Image(size_t newWidth, size_t newHeight): width(newWidth), height(newHeight) {}
+Image::Image(): _width(0), _height(0) {}
 
-Image::~Image() {} // Destructeur virtuel
+Image::Image(size_t width, size_t height): _width(width), _height(height) {}
+
+Image::~Image() {}
 
 
-/* Accesseur et opérateurs d'accès */
-size_t Image::getWidth() const {
-    return width;
+/* Getters */
+
+size_t Image::width() const {
+    return _width;
 }
 
-size_t Image::getHeight() const {
-    return height;
+size_t Image::height() const {
+    return _height;
 }
 
 size_t Image::size() const {
-    return (width * height);
+    return _width * _height;
 }
 
-/* Setter virtuel */
-void Image::resize(size_t newWidth, size_t newHeight) {
-    width = newWidth;
-    height = newHeight;
+
+/* Setters */
+
+void Image::resize(size_t width, size_t height) {
+    _width = width;
+    _height = height;
 }
 
-void Image::segment(size_t blockSize) {}
+void Image::segment(size_t block_size) {}
 
-void Image::mosaic(size_t blockSize, const char* libPath, size_t libSize) {}
+void Image::mosaic(size_t block_size, const char* lib_path, size_t lib_size, int mode) {}
 
 
-/* Chiffrement virtuel */
-size_t* Image::swap(size_t blockSize) {
+/* Opérateurs */
+
+size_t* Image::swap(size_t block_size) {
     return nullptr;
 }
 
-void Image::sort(size_t* key, size_t blockSize) {}
-
-/* Lecture et écriture dans un fichier */
-void Image::read(const char* path) {}
-
-void Image::write(const char* path, const char* comment) {}
+void Image::sort(size_t block_size, size_t* key) {}
 
 
+bool Image::read(const char* path) {
+    return true;
+}
 
-/* Fonctions d'aides */
+bool Image::write(const char* path, const char* comment) {
+    return true;
+}
 
-void printPercent(int pourcentage) {
-    const int barreLongueur = 100;
-    int nbBlocs = (int) (((float)(pourcentage) / 100.0 * barreLongueur));
+void printPercent(size_t current, size_t max) {
+    const int barreLongueur = 50;
+    size_t percent = (size_t) (((float) (current) / max) * 100.0f);
+    int nbBlocs = (int) (((float)(percent) / 100.0 * barreLongueur));
 
-    cout << "[" << BOLD << COLOR_VIOLET << setw(3) << pourcentage << "%" << RESET << "]";
+    cout << "[" << BOLD << COLOR_VIOLET << setw(3) << percent << "%" << RESET << "]";
     cout << "[";
+
     for (int i = 0; i < nbBlocs; ++i) {
         cout << "=";
     }
@@ -72,10 +81,4 @@ void printPercent(int pourcentage) {
     }
     cout << "]\r"; // Le '\r' permet de revenir au début de la ligne
     cout.flush();   // Force l'affichage immédiat
-}
-
-uint32_t getNanoSecondSeed() {
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    return (uint32_t)(ts.tv_nsec);
 }

@@ -7,7 +7,8 @@
 obj/
 bin/
 img/*
-pp_img/
+pgm/*
+ppm/*
 *.o
 *.pgm
 *.ppm
