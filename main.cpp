@@ -61,6 +61,9 @@ void processImageBase(const string& folder, const string& type, size_t lib_size,
             printPercent(i, lib_size);
         }
     }
+
+    printPercent(lib_size, lib_size);
+    cout << endl;
 }
 
 
@@ -92,6 +95,13 @@ int main(int argc, char* argv[]) {
         size_t new_width = (img.width() / block_size) * tile_size;
         size_t new_height = (img.height() / block_size) * tile_size;
 
+        while(new_width > 8000 || new_height > 8000) {
+            img.resize(img.width() / 2, img.height() / 2);
+
+            new_width = (img.width() / block_size) * tile_size;
+            new_height = (img.height() / block_size) * tile_size;
+        }
+
         cout << "Creation de la mosaique (PPM)" << endl;
         img.resize(new_width, new_height);
         img.mosaic(tile_size, "ppm", lib_size, mode);
@@ -106,6 +116,13 @@ int main(int argc, char* argv[]) {
 
         size_t new_width = (img.width() / block_size) * tile_size;
         size_t new_height = (img.height() / block_size) * tile_size;
+
+        while(new_width > 8000 || new_height > 8000) {
+            img.resize(img.width() / 2, img.height() / 2);
+
+            new_width = (img.width() / block_size) * tile_size;
+            new_height = (img.height() / block_size) * tile_size;
+        }
 
         cout << "Creation de la mosaique (PGM)" << endl;
         img.resize(new_width, new_height);

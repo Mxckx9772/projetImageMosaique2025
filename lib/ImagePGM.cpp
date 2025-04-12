@@ -248,7 +248,6 @@ void ImagePGM::mosaic(size_t block_size, const char* lib_path, size_t lib_size, 
     size_t new_height = block_size * height_factor;
 
     resize(new_width, new_height);
-    segment(block_size);
 
     octet* new_data = new octet[size()];
 
@@ -258,68 +257,6 @@ void ImagePGM::mosaic(size_t block_size, const char* lib_path, size_t lib_size, 
     auto computeMosaicBlock = [&](size_t thread_id, size_t start, size_t end) -> void {
 
         for (size_t block_id = start; block_id < end; block_id++) {
-            /*size_t block_row = block_id / width_factor;
-            size_t block_col = block_id % width_factor;
-    
-            float min_dist = numeric_limits<float>::max();
-    
-            string best_path;
-            ImagePGM tile, block;
-            octet* block_data = new octet[block_size * block_size];
-    
-            for (size_t i = 0; i < block_size; i++) {
-                for (size_t j = 0; j < block_size; ++j) {
-                    size_t index = ((block_row * block_size + i) * _width + (block_col * block_size + j));
-    
-                    block_data[i * block_size + j] = _data[index];
-                }
-            }
-    
-            block = ImagePGM(block_size, block_size, block_data);
-            delete[] block_data;
-    
-            for (size_t i = 0; i < lib_size; i++) {
-                string current_path = string(lib_path) + "/" + to_string(i) + ".pgm";
-                
-                if (tile.read(current_path.c_str())) {
-                    tile.resize(block_size, block_size);
-                    float current_dist;
-
-                    switch (mode) {
-                        case 1:
-                            current_dist = tile.bhattacharyyaDist(block);
-                            break;
-
-                        case 2:
-                            current_dist = tile.chi2(block);
-                            break;
-
-                        default:
-                        current_dist = abs(tile.average() - block.average());
-                        break;
-                    }
-
-                    if (current_dist < min_dist) {
-                        min_dist = current_dist;
-                        best_path = current_path;
-                    }
-                }
-            }
-    
-            if (!best_path.empty()) {
-                if (tile.read(best_path.c_str())) {
-                    tile.resize(block_size, block_size);
-    
-                    for (size_t i = 0; i < block_size; i++) {
-                        for (size_t j = 0; j < block_size; j++) {
-                            size_t index = ((block_row * block_size + i) * _width + (block_col * block_size + j));
-                            new_data[index] = tile[i][j];
-                        }
-                    }
-                }
-            }
-
-            processed_blocks++;*/
             size_t block_row = block_id / width_factor;
             size_t block_col = block_id % width_factor;
     

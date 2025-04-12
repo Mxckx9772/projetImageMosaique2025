@@ -7,6 +7,7 @@
 #include <fstream>
 #include <thread>
 #include <atomic>
+#include <immintrin.h>
 //#include <functional>
 
 using namespace std;
@@ -34,7 +35,7 @@ ImagePPM::~ImagePPM() {
 /* Getters */
 
 Color ImagePPM::average() const {
-    Color _average;
+    /*Color _average;
 
     for (size_t i = 0; i < size() * 3; i += 3) {
         _average[0] += (float) _data[i];
@@ -44,7 +45,54 @@ Color ImagePPM::average() const {
 
     _average /= (float) size();
 
-    return _average;
+    return _average;*/
+    __m256i sum_r_epi32 = _mm256_setzero_si256();
+    __m256i sum_g_epi32 = _mm256_setzero_si256();
+    __m256i sum_b_epi32 = _mm256_setzero_si256();
+    size_t num_pixels = _width * _height;
+    size_t i = 0;
+
+    for (; i + 8 <= num_pixels; ++i) {
+        __m256i colors_i = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(_data + i * 3));
+
+        // Extract R, G, B bytes and convert to 32-bit integers
+        __m256i r_bytes = _mm256_shuffle_epi8(colors_i, _mm256_setr_epi8(0, -1, -1, -1, 3, -1, -1, -1, 6, -1, -1, -1, 9, -1, -1, -1, 12, -1, -1, -1, 15, -1, -1, -1, 18, -1, -1, -1, 21, -1, -1, -1));
+        __m256i g_bytes = _mm256_shuffle_epi8(colors_i, _mm256_setr_epi8(-1, 1, -1, -1, -1, 4, -1, -1, -1, 7, -1, -1, -1, 10, -1, -1, -1, 13, -1, -1, -1, 16, -1, -1, -1, 19, -1, -1, -1, 22, -1, -1));
+        __m256i b_bytes = _mm256_shuffle_epi8(colors_i, _mm256_setr_epi8(-1, -1, 2, -1, -1, -1, 5, -1, -1, -1, 8, -1, -1, -1, 11, -1, -1, -1, 14, -1, -1, -1, 17, -1, -1, -1, 20, -1, -1, -1, 23, -1));
+
+        sum_r_epi32 = _mm256_add_epi32(sum_r_epi32, _mm256_cvtepu8_epi32(_mm256_extracti128_si256(r_bytes, 0)));
+        sum_r_epi32 = _mm256_add_epi32(sum_r_epi32, _mm256_cvtepu8_epi32(_mm256_extracti128_si256(r_bytes, 1)));
+
+        sum_g_epi32 = _mm256_add_epi32(sum_g_epi32, _mm256_cvtepu8_epi32(_mm256_extracti128_si256(g_bytes, 0)));
+        sum_g_epi32 = _mm256_add_epi32(sum_g_epi32, _mm256_cvtepu8_epi32(_mm256_extracti128_si256(g_bytes, 1)));
+
+        sum_b_epi32 = _mm256_add_epi32(sum_b_epi32, _mm256_cvtepu8_epi32(_mm256_extracti128_si256(b_bytes, 0)));
+        sum_b_epi32 = _mm256_add_epi32(sum_b_epi32, _mm256_cvtepu8_epi32(_mm256_extracti128_si256(b_bytes, 1)));
+    }
+
+    uint32_t sum_r_arr[8], sum_g_arr[8], sum_b_arr[8];
+    _mm256_storeu_si256(reinterpret_cast<__m256i*>(sum_r_arr), sum_r_epi32);
+    _mm256_storeu_si256(reinterpret_cast<__m256i*>(sum_g_arr), sum_g_epi32);
+    _mm256_storeu_si256(reinterpret_cast<__m256i*>(sum_b_arr), sum_b_epi32);
+
+    float total_r = 0, total_g = 0, total_b = 0;
+    for (int j = 0; j < 8; ++j) {
+        total_r += sum_r_arr[j];
+        total_g += sum_g_arr[j];
+        total_b += sum_b_arr[j];
+    }
+
+    for (; i < num_pixels; ++i) {
+        total_r += _data[i * 3 + 0];
+        total_g += _data[i * 3 + 1];
+        total_b += _data[i * 3 + 2];
+    }
+
+    if (num_pixels > 0) {
+        return Color(total_r / num_pixels, total_g / num_pixels, total_b / num_pixels);
+    } else {
+        return Color(0.0f, 0.0f, 0.0f);
+    }
 }
 
 float** ImagePPM::histo() const {
@@ -286,7 +334,7 @@ void ImagePPM::mosaic(size_t block_size, const char* lib_path, size_t lib_size, 
     size_t new_height = block_size * height_factor;
 
     resize(new_width, new_height);
-    segment(block_size);
+    
 
     octet* new_data = new octet[size() * 3];
 
@@ -316,7 +364,8 @@ void ImagePPM::mosaic(size_t block_size, const char* lib_path, size_t lib_size, 
     
             block = ImagePPM(block_size, block_size, block_data);
             delete[] block_data;
-    
+
+
             for (size_t i = 0; i < lib_size; i++) {
                 string current_path = string(lib_path) + "/" + to_string(i) + ".ppm";
                 
@@ -348,13 +397,21 @@ void ImagePPM::mosaic(size_t block_size, const char* lib_path, size_t lib_size, 
             if (!best_path.empty()) {
                 if (tile.read(best_path.c_str())) {
                     tile.resize(block_size, block_size);
-    
+
                     for (size_t i = 0; i < block_size; i++) {
-                        for (size_t j = 0; j < block_size; j++) {
-                            index = ((block_row * block_size + i) * _width + (block_col * block_size + j)) * 3;
-                            new_data[index] = tile[i][j * 3];
-                            new_data[index + 1] = tile[i][j * 3 + 1];
-                            new_data[index + 2] = tile[i][j * 3 + 2];
+                        size_t dest_row_start = (block_row * block_size + i) * _width * 3 + (block_col * block_size) * 3;
+                        octet* src_row = tile[i];
+
+                        size_t j = 0;
+
+                        for (; j + 8 <= block_size; ++j) {
+                            _mm256_storeu_si256((__m256i*) &new_data[dest_row_start + j * 3], _mm256_loadu_si256((const __m256i*) &src_row[j * 3]));
+                        }
+                        
+                        for (; j < block_size; ++j) {
+                            new_data[dest_row_start + j * 3 + 0] = src_row[j * 3 + 0];
+                            new_data[dest_row_start + j * 3 + 1] = src_row[j * 3 + 1];
+                            new_data[dest_row_start + j * 3 + 2] = src_row[j * 3 + 2];
                         }
                     }
                 }
