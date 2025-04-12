@@ -25,6 +25,7 @@ class ImagePGM : public Image {
 
         /* Comparaison */
         float bhattacharyyaDist(const ImagePGM& other) const;
+        float PSNR(const ImagePGM& other) const;
 
         /* Setter */
         void resize(size_t newWidth, size_t newHeight) override;

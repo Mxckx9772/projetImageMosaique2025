@@ -150,6 +150,20 @@ float ImagePGM::bhattacharyyaDist(const ImagePGM& other) const {
     return dist;
 }
 
+float ImagePGM::PSNR(const ImagePGM& other) const{
+    double eqm = 0.0;
+    size_t num_pixels = size();
+    for(int i = 0; i < num_pixels; i++){
+        eqm += pow(grey[i] - other.grey[i], 2);
+    }
+    eqm /= num_pixels;
+    if(eqm == 0){
+        return INFINITY;
+    }
+    double psnr = 10 * log10(pow(255.0,2)/eqm);
+    return psnr;
+}
+
 void ImagePGM::operator= (const ImagePGM &other) {
     if (this == &other) {
         return;

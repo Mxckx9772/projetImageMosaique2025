@@ -36,6 +36,9 @@ class ImagePPM : public Image {
         size_t* swap(size_t blockSize) override;
         void sort(size_t* key, size_t blockSize) override;
 
+        /* Comparaison */
+        float PSNR(const ImagePPM& other) const;
+
         /* Lecture et écriture dans un fichier */
         void read(const char* path) override;
         void write(const char* path, const char* comment = nullptr) override;

@@ -139,8 +139,12 @@ int main(int argc, char** argv){
         duration = ((end - start) / CLOCKS_PER_SEC) / 60.0;
         cout << "Temps de traitement de la mosaïque : " << fixed << setprecision(3) << duration << " min" << endl;
         imgPGM.write("./out/mosaic.pgm");
+        ImagePGM tmp;
+        tmp.read(imgPath);
+        cout << "PSNR : " << tmp.PSNR(imgPGM) << endl;
+        cout << "Bhattacharyya : " << tmp.bhattacharyyaDist(imgPGM) << endl;
 
-    } else { // Default to PPM
+    } else { // Default to PPM  
         imgPPM.read(imgPath);
         maxDim = max(imgPPM.getWidth(), imgPPM.getHeight());
         if(maxDim > 512) {
@@ -162,6 +166,10 @@ int main(int argc, char** argv){
         duration = ((end - start) / CLOCKS_PER_SEC) / 60.0;
         cout << "Temps de traitement de la mosaïque : " << fixed << setprecision(3) << duration << " min" << endl;
         imgPPM.write("./out/mosaic.ppm");
+        ImagePPM tmp;
+        tmp.read(imgPath);
+        cout << "PSNR : " << tmp.PSNR(imgPPM) << endl;
+        //cout << "Bhattacharyya : " << tmp.bhattacharyyaDist(imgPPM) << endl;
     }
 
     for (char* path : library) {

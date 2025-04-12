@@ -137,6 +137,20 @@ Color ImagePPM::average() const {
     }
 }
 
+float ImagePPM::PSNR(const ImagePPM& other) const {
+    double eqm = 0.0;
+    size_t num_pixels = size() * 3;
+    for (size_t i = 0; i < num_pixels; ++i) {
+        eqm += pow(pixels[i] - other.pixels[i], 2);
+    }
+    eqm /= num_pixels;
+    if(eqm == 0) {
+        return INFINITY;
+    }
+    double psnr = 10 * log10(pow(255.0,2)/eqm);
+    return psnr;
+}
+
 void ImagePPM::resize(size_t newWidth, size_t newHeight) {
     if (((width != newWidth) || (height != newHeight)) && (width != 0 && height != 0) && (newWidth != 0 && newHeight != 0)) {
         size_t newSize = newWidth * newHeight;
