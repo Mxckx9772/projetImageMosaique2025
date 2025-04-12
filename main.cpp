@@ -95,7 +95,7 @@ int main(int argc, char* argv[]) {
         cout << "Creation de la mosaique (PPM)" << endl;
         img.resize(new_width, new_height);
         img.mosaic(tile_size, "ppm", lib_size, mode);
-        img.write("out.ppm", "Created by Mosaïc Team in 2025.");
+        img.write("./out/mosaic.ppm", "Created by Mosaïc Team in 2025.");
 
     } else if (type == "pgm") {
         ImagePGM img;
@@ -110,7 +110,7 @@ int main(int argc, char* argv[]) {
         cout << "Creation de la mosaique (PGM)" << endl;
         img.resize(new_width, new_height);
         img.mosaic(tile_size, "pgm", lib_size, mode);
-        img.write("out.ppm", "Created by Mosaïc Team in 2025.");
+        img.write("./out/mosaic.pgm", "Created by Mosaïc Team in 2025.");
     }
 
     return 0;

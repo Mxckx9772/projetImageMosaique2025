@@ -7,7 +7,7 @@ root = tk.Tk()
 root.title("Crypto Mosaic")
 root.configure(bg="#f0f0f0")
 
-modes = ["Moyenne", "Distance de Pearson", "Distance de Bhattacharyya"]
+modes = ["Moyenne", "Distance de Bhattacharyya","Distance de Chi2"]
 imagette_sizes = ["4", "8", "16", "32", "64", "128"]
 image_path = ""
 blocksizes =  ["4", "8", "16", "32", "64", "128"]
@@ -72,7 +72,7 @@ def transform():
     blocksize = str(current_bloc_size.get())
     libsize = str(LibSize_entry.get())
     img_extension = "ppm" if image_path.endswith(".ppm") else "pgm"
-    os.system(f"./bin/main {image_path} {img_extension} {blocksize} {imagette_size} {libsize}")
+    os.system(f"./bin/main {image_path} {img_extension} {blocksize} {imagette_size} {libsize} {mode}")
     transformed_image_path = "./out/mosaic."+img_extension
     if os.path.exists(transformed_image_path):
         show_image_in_new_window(image_path, "Image originale")
