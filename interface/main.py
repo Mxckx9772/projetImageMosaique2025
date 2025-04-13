@@ -7,10 +7,12 @@ from PIL import Image, ImageTk
 
 root = tk.Tk()
 root.title("Crypto Mosaic")
+root.minsize(400, 855)
 root.configure(bg="#f0f0f0")
 
 modes = ["Moyenne", "Distance de Bhattacharyya","Distance de Chi2"]
-sec_modes = ["Vernam", "Swap"]
+cipher_modes = ["Swap", "Vernam"]
+sec_modes = ["Ne rien faire", "Chiffrer", "Déchiffrer"]
 imagette_sizes = ["4", "8", "16", "32", "64", "128"]
 image_path = ""
 blocksizes =  ["4", "8", "16", "32", "64", "128"]
@@ -74,23 +76,32 @@ def choose_image():
 def transform():
     selected_mode = modes.index(dropdown_var_mode.get())
     mode = str(selected_mode)
-    selected_sec_mode = sec_modes.index(dropdown_var_sec_mode.get())
-    sec_mode = str(selected_sec_mode)
+    selected_sec_mode = cipher_modes.index(dropdown_var_cipher_mode.get())
+    cipher_mode = str(selected_sec_mode)
     imagette_size = str(current_imagette_size.get())
     blocksize = str(current_bloc_size.get())
     libsize = str(LibSize_entry.get())
+    sec_mode = str(dropdown_var_sec_mode.get())
+    key_name = keyname_entry.get()
     img_extension = "ppm" if image_path.endswith(".ppm") else "pgm"
-    if sec_var.get():
-        os.system(f"./bin/encrypt {image_path} {sec_mode}")
+    if sec_mode == sec_modes[2]:
+        if os.path.exists(image_path):
+            os.system(f"./bin/decrypt {image_path} {img_extension} {cipher_mode} {key_name}")
+            show_image_in_new_window(image_path, "Image déchiffrée")
     else:
+        os.system("rm out/mosaic.ppm")
+        os.system("rm out/mosaic.pgm")
         os.system(f"./bin/mosaic {image_path} {img_extension} {blocksize} {imagette_size} {libsize} {mode}")
-    transformed_image_path = "./out/mosaic."+img_extension
-    if os.path.exists(transformed_image_path):
-        show_image_in_new_window(image_path, "Image originale")
-        show_image_in_new_window(transformed_image_path, "Image transformée")
-    else:
-        showerror(title='Erreur', message="L'image transformée n'a pas été trouvée.")
-        print("Erreur : l'image transformée n'a pas été trouvée.")
+        transformed_image_path = "./out/mosaic."+img_extension
+        if os.path.exists(transformed_image_path):
+            if sec_mode == sec_modes[1]:
+                os.system(f"rm {key_name}.prvt")
+                os.system(f"./bin/encrypt {transformed_image_path} {img_extension} {cipher_mode} {key_name} {blocksize}")
+            show_image_in_new_window(image_path, "Image originale")
+            show_image_in_new_window(transformed_image_path, "Image transformée")
+        else:
+            showerror(title='Erreur', message="L'image transformée n'a pas été trouvée.")
+            print("Erreur : l'image transformée n'a pas été trouvée.")
 
 # Widgets de l'interface
 file_label = Label(root, text="Veuillez choisir une image", wraplength=350,bg="#f0f0f0")
@@ -100,7 +111,7 @@ choose_button.pack()
 
 # Mode de transformation
 mode_label = Label(root, text="Veuillez choisir un mode de transformation", wraplength=350, bg="#f0f0f0")
-mode_label.pack(padx=20, pady=10)
+mode_label.pack(pady=10)
 dropdown_var_mode = tk.StringVar(root)
 dropdown_var_mode.set(modes[0])
 dropdown_menu_mode = tk.OptionMenu(root, dropdown_var_mode, *modes)
@@ -159,24 +170,31 @@ slider_imagette = tk.Scale(
 slider_imagette.pack()
 
 # Choisir la taille de la bibliothèque
-Label(root, text="Veuiller renseigner la taille de la bibliothèque", wraplength=350, bg="#f0f0f0").pack(pady=10)
+Label(root, text="Veuillez renseigner la taille de la bibliothèque", wraplength=350, bg="#f0f0f0").pack(pady=10)
 LibSize_entry = tk.Entry(root, bg="#f0f0f0", fg="black")
 LibSize_entry.insert(0, '20580')
 LibSize_entry.pack()
 
-# Sécurité
-Label(root, text="Voulez-vous chiffrer l'image ?", wraplength=350, bg="#f0f0f0").pack(pady=10)
-sec_var = tk.BooleanVar()
-security_check = tk.Checkbutton(root, variable=sec_var, bg="#f0f0f0", fg="black")
-security_check.pack()
-
-Label(root, text="Veuillez choisir un mode de chiffrement", wraplength=350, bg="#f0f0f0").pack(padx=20, pady=10)
+Label(root, text="Chiffrement ?", wraplength=350, bg="#f0f0f0").pack(pady=10)
 dropdown_var_sec_mode = tk.StringVar(root)
 dropdown_var_sec_mode.set(sec_modes[0])
 dropdown_menu_sec_mode = tk.OptionMenu(root, dropdown_var_sec_mode, *sec_modes)
 dropdown_menu_sec_mode.config(bg="#f0f0f0", fg="black")
 dropdown_menu_sec_mode["menu"].config(bg="#f0f0f0", fg="black")
 dropdown_menu_sec_mode.pack()
+
+Label(root, text="Si chiffrement, veuillez renseigner un nom de clé", wraplength=350, bg="#f0f0f0").pack(pady=10)
+keyname_entry = tk.Entry(root, bg="#f0f0f0", fg="black")
+keyname_entry.insert(0, 'key')
+keyname_entry.pack()
+
+Label(root, text="Veuillez choisir une méthode de chiffrement", wraplength=350, bg="#f0f0f0").pack(pady=10)
+dropdown_var_cipher_mode = tk.StringVar(root)
+dropdown_var_cipher_mode.set(cipher_modes[0])
+dropdown_menu_cipher_mode = tk.OptionMenu(root, dropdown_var_cipher_mode, *cipher_modes)
+dropdown_menu_cipher_mode.config(bg="#f0f0f0", fg="black")
+dropdown_menu_cipher_mode["menu"].config(bg="#f0f0f0", fg="black")
+dropdown_menu_cipher_mode.pack()
 
 transform_button = tk.Button(root, text="Transformer l'image", command=transform, fg="white")
 transform_button.config(state=tk.DISABLED)

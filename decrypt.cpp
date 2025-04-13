@@ -10,7 +10,7 @@ using namespace filesystem;
 
 int main(int argc, char* argv[]) {
     if (!(argc == 5 || argc == 6)) {
-        cerr << "Usage : " << argv[0] << "path type mode key_path" << endl;
+        cerr << "Usage : " << argv[0] << " path type mode key_path" << endl;
         return 1;
     }
 
