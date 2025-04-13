@@ -12,6 +12,11 @@ PP_DIR = pp_img
 SOURCES = $(wildcard *.cpp)
 EXECUTABLES = $(patsubst %.cpp, $(BIN_DIR)/%, $(SOURCES))
 
+TARGET = $(BIN_DIR)/main
+TARGET_BENCH = $(BIN_DIR)/bench
+MAIN = main.cpp
+BENCH = bench.cpp
+
 LIB = $(wildcard $(LIB_DIR)/*.cpp)
 OBJ = $(patsubst $(LIB_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(LIB))
 
@@ -25,6 +30,10 @@ $(OBJ_DIR)/%.o: $(LIB_DIR)/%.cpp $(OBJ_DIR)
 # Linking du programme
 $(BIN_DIR)/%:%.cpp $(OBJ) $(MAIN) $(BIN_DIR) $(IMG_DIR) $(PP_DIR)
 	$(COMPILER) $(FLAGS) $(OBJ) $< -o $@ 
+
+# Compilation du bench
+$(TARGET_BENCH): $(OBJ) $(BENCH) | $(BIN_DIR)
+	$(COMPILER) $(FLAGS) $(OBJ) $(BENCH) -o $@
 
 # Instanciation des dossiers
 $(OBJ_DIR):
@@ -45,3 +54,9 @@ run: clean $(TARGET)
 	clear
 	@echo "Liste des arguments : $(filter-out run,$(MAKECMDGOALS))"
 	./$(TARGET) $(filter-out run,$(MAKECMDGOALS))
+
+bench: clean $(TARGET_BENCH)
+	clear
+	@echo "Execution du benchmark..."
+	./$(TARGET_BENCH) $(filter-out bench,$(MAKECMDGOALS))
+	@echo "Fin du benchmark"
