@@ -1,6 +1,8 @@
 import os
 import tkinter as tk
 from tkinter import filedialog, Label
+from tkinter.messagebox import showerror
+
 from PIL import Image, ImageTk
 
 root = tk.Tk()
@@ -21,6 +23,7 @@ def display_image(path, target_label, size):
         target_label.configure(image=img_tk)
         target_label.image = img_tk
     except Exception as e:
+        showerror(title='Erreur', message=f"Erreur d'affichage de l'image : {e}")
         print(f"Erreur d'affichage de l'image : {e}")
 
 def show_image_in_new_window(image_path, title):
@@ -86,6 +89,7 @@ def transform():
         show_image_in_new_window(image_path, "Image originale")
         show_image_in_new_window(transformed_image_path, "Image transformée")
     else:
+        showerror(title='Erreur', message="L'image transformée n'a pas été trouvée.")
         print("Erreur : l'image transformée n'a pas été trouvée.")
 
 # Widgets de l'interface
