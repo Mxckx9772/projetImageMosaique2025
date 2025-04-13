@@ -170,12 +170,12 @@ slider_imagette = tk.Scale(
 slider_imagette.pack()
 
 # Choisir la taille de la bibliothèque
-Label(root, text="Veuillez renseigner la taille de la bibliothèque", wraplength=350, bg="#f0f0f0").pack(pady=10)
+Label(root, text="Veuillez renseigner la taille de la bibliothèque d'imagettes", wraplength=350, bg="#f0f0f0").pack(pady=10)
 LibSize_entry = tk.Entry(root, bg="#f0f0f0", fg="black")
 LibSize_entry.insert(0, '20580')
 LibSize_entry.pack()
 
-Label(root, text="Chiffrement ?", wraplength=350, bg="#f0f0f0").pack(pady=10)
+Label(root, text="Voulez-vous chiffrer ?", wraplength=350, bg="#f0f0f0").pack(pady=10)
 dropdown_var_sec_mode = tk.StringVar(root)
 dropdown_var_sec_mode.set(sec_modes[0])
 dropdown_menu_sec_mode = tk.OptionMenu(root, dropdown_var_sec_mode, *sec_modes)
@@ -188,7 +188,7 @@ keyname_entry = tk.Entry(root, bg="#f0f0f0", fg="black")
 keyname_entry.insert(0, 'key')
 keyname_entry.pack()
 
-Label(root, text="Veuillez choisir une méthode de chiffrement", wraplength=350, bg="#f0f0f0").pack(pady=10)
+Label(root, text="Si chiffrement, veuillez choisir une méthode de chiffrement", wraplength=350, bg="#f0f0f0").pack(pady=10)
 dropdown_var_cipher_mode = tk.StringVar(root)
 dropdown_var_cipher_mode.set(cipher_modes[0])
 dropdown_menu_cipher_mode = tk.OptionMenu(root, dropdown_var_cipher_mode, *cipher_modes)
