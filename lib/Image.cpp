@@ -59,6 +59,8 @@ size_t* Image::swap(size_t block_size) {
 
 void Image::sort(size_t block_size, size_t* key) {}
 
+void Image::vernamEncrypt(const char* key_path) {};
+void Image::vernamDecrypt(const char* key_path) {};
 
 bool Image::read(const char* path) {
     return true;

@@ -35,7 +35,8 @@ int main(int argc, char* argv[]) {
             img.write(path.c_str(), "Decrypt by Mosaic Team.");
 
         } else if ( mode == 1) {
-
+            img.vernamDecrypt((key_path + "." + type).c_str());
+            img.write(path.c_str(), "Encrypt by Mosaic Team.");
         }
     } else if (type == "pgm") {
         ImagePGM img;
@@ -50,7 +51,8 @@ int main(int argc, char* argv[]) {
             img.write(path.c_str(), "Decrypt by Mosaic Team.");
 
         } else if ( mode == 1) {
-
+            img.vernamDecrypt((key_path + "." + type).c_str());
+            img.write(path.c_str(), "Encrypt by Mosaic Team.");
         }
 
     }

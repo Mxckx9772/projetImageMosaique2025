@@ -255,7 +255,27 @@ class ImagePGM : public Image {
          */
         void sort(size_t block_size, size_t* key) override;
 
+        /**
+         * 
+         * @brief Méthode virtuelle de trie.
+         * 
+         * @param block_size Taille des blocs.
+         * 
+         * @note Ne fait rien.
+         * 
+         */
+        void vernamEncrypt(const char* key_path) override;
 
+        /**
+         * 
+         * @brief Méthode virtuelle de trie.
+         * 
+         * @param block_size Taille des blocs.
+         * 
+         * @note Ne fait rien.
+         * 
+         */
+        void vernamDecrypt(const char* key_path) override;
 
         /* Lecture et écriture  */
 

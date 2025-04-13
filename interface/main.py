@@ -83,7 +83,7 @@ def transform():
     if sec_var.get():
         os.system(f"./bin/encrypt {image_path} {sec_mode}")
     else:
-        os.system(f"./bin/main {image_path} {img_extension} {blocksize} {imagette_size} {libsize} {mode}")
+        os.system(f"./bin/mosaic {image_path} {img_extension} {blocksize} {imagette_size} {libsize} {mode}")
     transformed_image_path = "./out/mosaic."+img_extension
     if os.path.exists(transformed_image_path):
         show_image_in_new_window(image_path, "Image originale")

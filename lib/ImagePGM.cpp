@@ -463,6 +463,36 @@ void ImagePGM::sort(size_t block_size, size_t *key) {
     _data = new_data;
 }
 
+void ImagePGM::vernamEncrypt(const char* key_path) {
+    ImagePGM key(_width, _height);
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(0, 255);
+
+    for (size_t i = 0; i < size(); i++) {
+        key._data[i] = distrib(gen);
+    }
+
+    for (size_t i = 0; i < size(); i++) {
+        _data[i] ^= key._data[i];
+    }
+
+    key.write(key_path, "Vernam key created by Mosaic Team");
+}
+
+void ImagePGM::vernamDecrypt(const char* key_path) {
+    ImagePGM key;
+    key.read(key_path);
+    if (key._width != _width || key._height != _height) {
+        std::cerr << "Error: Key image dimensions do not match." << std::endl;
+        return;
+    }
+
+    for (size_t i = 0; i < size(); ++i) {
+        _data[i] ^= key._data[i];
+    }
+}
 
 /* Lecture et écriture  */
 

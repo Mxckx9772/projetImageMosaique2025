@@ -135,6 +135,28 @@ class Image {
          */
         virtual void sort(size_t block_size, size_t* key);
 
+        /**
+         * 
+         * @brief Méthode virtuelle de trie.
+         * 
+         * @param block_size Taille des blocs.
+         * 
+         * @note Ne fait rien.
+         * 
+         */
+        virtual void vernamEncrypt(const char* key_path);
+
+        /**
+         * 
+         * @brief Méthode virtuelle de trie.
+         * 
+         * @param block_size Taille des blocs.
+         * 
+         * @note Ne fait rien.
+         * 
+         */
+        virtual void vernamDecrypt(const char* key_path);
+
 
         /* Lecture et écriture  */
 

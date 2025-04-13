@@ -567,6 +567,37 @@ void ImagePPM::sort(size_t block_size, size_t *key) {
     _data = new_data;
 }
 
+void ImagePPM::vernamEncrypt(const char* key_path) {
+    ImagePPM key(_width, _height);
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(0, 255);
+
+    for (size_t i = 0; i < size() * 3; i++) {
+        key._data[i] = distrib(gen);
+    }
+
+    for (size_t i = 0; i < size() * 3; i++) {
+        _data[i] ^= key._data[i];
+    }
+
+    key.write(key_path, "Vernam key created by Mosaic Team");
+}
+
+void ImagePPM::vernamDecrypt(const char* key_path) {
+    ImagePPM key;
+    key.read(key_path);
+    if (key._width != _width || key._height != _height) {
+        std::cerr << "Erreur - Taille de clés incohérente." << std::endl;
+        return;
+    }
+
+    for (size_t i = 0; i < size() * 3; ++i) {
+        _data[i] ^= key._data[i];
+    }
+}
+
 
 /* Lecture et écriture  */
 
