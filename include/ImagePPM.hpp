@@ -164,6 +164,19 @@ class ImagePPM : public Image {
          * 
          * @brief Accesseur sur l'histogramme
          * 
+         * @param other Objet ImagePGM
+         * @return Valeur flottante
+         * 
+         * @note Calcul la divergence de Kullback-Leibler entre
+         * les 2 distributions des images.
+         * 
+         */
+        float hellingerDist(const ImagePPM& other) const;
+
+        /**
+         * 
+         * @brief Accesseur sur l'histogramme
+         * 
          * @return Objet ImagePGM
          * 
          * @note Effectue la conversion de ppm vers pgm

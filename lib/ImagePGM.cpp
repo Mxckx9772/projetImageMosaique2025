@@ -36,16 +36,6 @@ ImagePGM::~ImagePGM() {
 /* Getters */
 
 octet ImagePGM::average() const {
-    /*float _average = 0.0f;
-
-    for (size_t i = 0; i < size(); i++) {
-        _average += (float) _data[i];
-    }
-
-    _average /= (float) size();
-
-    return _average;*/
-
     float sum = 0.0f;
     size_t i = 0;
 
@@ -166,6 +156,20 @@ float ImagePGM::chi2(const ImagePGM& other) const {
     return dist;
 }
 
+float ImagePGM::hellingerDist(const ImagePGM& other) const {
+    float dist_sq = 0.0f;
+    float* self_ddp = ddp();
+    float* other_ddp = other.ddp();
+
+    for (size_t i = 0; i < 256; i++) {
+        dist_sq += pow(sqrt(self_ddp[i]) - sqrt(other_ddp[i]), 2);
+    }
+
+    delete[] self_ddp;
+    delete[] other_ddp;
+
+    return sqrt(0.5f * dist_sq);
+}
 
 /* Setters */
 
@@ -290,6 +294,10 @@ void ImagePGM::mosaic(size_t block_size, const char* lib_path, size_t lib_size, 
                         case 2:
                             current_dist = tile.chi2(block);
                             break;
+                        
+                        case 3:
+                            current_dist = tile.hellingerDist(block);
+                            break;
 
                         default:
                         current_dist = abs(tile.average() - block.average());
@@ -304,6 +312,7 @@ void ImagePGM::mosaic(size_t block_size, const char* lib_path, size_t lib_size, 
             }
 
             if (!best_path.empty()) {
+                
                 if (tile.read(best_path.c_str())) {
                     tile.resize(block_size, block_size);
     
@@ -323,6 +332,8 @@ void ImagePGM::mosaic(size_t block_size, const char* lib_path, size_t lib_size, 
                     }
                 }
             }
+
+            processed_blocks++;
 
         }
             
@@ -466,9 +477,9 @@ void ImagePGM::sort(size_t block_size, size_t *key) {
 void ImagePGM::vernamEncrypt(const char* key_path) {
     ImagePGM key(_width, _height);
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distrib(0, 255);
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<> distrib(0, 255);
 
     for (size_t i = 0; i < size(); i++) {
         key._data[i] = distrib(gen);
@@ -485,7 +496,7 @@ void ImagePGM::vernamDecrypt(const char* key_path) {
     ImagePGM key;
     key.read(key_path);
     if (key._width != _width || key._height != _height) {
-        std::cerr << "Error: Key image dimensions do not match." << std::endl;
+        cerr << "Error: Key image dimensions do not match." << endl;
         return;
     }
 

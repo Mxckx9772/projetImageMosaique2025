@@ -229,6 +229,27 @@ float ImagePPM::chi2(const ImagePPM& other) const {
     return dist;
 }
 
+float ImagePPM::hellingerDist(const ImagePPM& other) const {
+    float dist_sq = 0.0f;
+    float** self_ddp = ddp();
+    float** other_ddp = other.ddp();
+
+    for (int c = 0; c < 3; ++c) { 
+        for (size_t i = 0; i < 256; i++) {
+            dist_sq += pow(sqrt(self_ddp[c][i]) - sqrt(other_ddp[c][i]), 2);
+        }
+    }
+
+    for (int c = 0; c < 3; ++c) {
+        delete[] self_ddp[c];
+        delete[] other_ddp[c];
+    }
+    delete[] self_ddp;
+    delete[] other_ddp;
+
+    return sqrt(0.5f * dist_sq);
+}
+
 ImagePGM ImagePPM::toPGM() {
     ImagePGM out_image(_width, _height);
 
@@ -383,6 +404,10 @@ void ImagePPM::mosaic(size_t block_size, const char* lib_path, size_t lib_size, 
 
                         case 2:
                             current_dist = tile.chi2(block);
+                            break;
+                        
+                        case 3:
+                            current_dist = tile.hellingerDist(block);
                             break;
 
                         default:
@@ -570,9 +595,9 @@ void ImagePPM::sort(size_t block_size, size_t *key) {
 void ImagePPM::vernamEncrypt(const char* key_path) {
     ImagePPM key(_width, _height);
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distrib(0, 255);
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<> distrib(0, 255);
 
     for (size_t i = 0; i < size() * 3; i++) {
         key._data[i] = distrib(gen);
@@ -589,7 +614,7 @@ void ImagePPM::vernamDecrypt(const char* key_path) {
     ImagePPM key;
     key.read(key_path);
     if (key._width != _width || key._height != _height) {
-        std::cerr << "Erreur - Taille de clés incohérente." << std::endl;
+        cerr << "Erreur - Taille de clés incohérente." << endl;
         return;
     }
 

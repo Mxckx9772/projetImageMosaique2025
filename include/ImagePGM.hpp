@@ -158,6 +158,22 @@ class ImagePGM : public Image {
          */
         float chi2(const ImagePGM& other) const;
 
+        /**
+         * 
+         * @brief Accesseur sur l'histogramme
+         * 
+         * @param other Objet ImagePGM
+         * @return Valeur flottante
+         * 
+         * @note Calcul la divergence de Kullback-Leibler entre
+         * les 2 distributions des images.
+         * 
+         */
+        float hellingerDist(const ImagePGM& other) const;
+
+
+        float jensenShannonDiv(const ImagePGM& other) const;
+
 
         /* Setters */
         /**
