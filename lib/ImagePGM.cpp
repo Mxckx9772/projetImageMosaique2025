@@ -8,6 +8,7 @@
 #include <thread>
 #include <atomic>
 #include <immintrin.h>
+#include <mutex>
 //#include <functional>
 
 using namespace std;
@@ -252,7 +253,9 @@ void ImagePGM::mosaic(size_t block_size, const char* lib_path, size_t lib_size, 
     octet* new_data = new octet[size()];
 
     
-    std::atomic<size_t> processed_blocks(0);
+    atomic<size_t> processed_blocks(0);
+    mutex mtx;
+
 
     auto computeMosaicBlock = [&](size_t thread_id, size_t start, size_t end) -> void {
 
@@ -321,8 +324,6 @@ void ImagePGM::mosaic(size_t block_size, const char* lib_path, size_t lib_size, 
                 }
             }
 
-            processed_blocks++;
-
         }
             
 
@@ -343,7 +344,9 @@ void ImagePGM::mosaic(size_t block_size, const char* lib_path, size_t lib_size, 
     }
 
     while (processed_blocks < total_block) {
+        mtx.lock();
         printPercent(processed_blocks, total_block);
+        mtx.unlock();
     }
 
     for (size_t i = 0; i < total_thread; ++i) {

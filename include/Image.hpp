@@ -162,5 +162,7 @@ class Image {
 };
 
 void printPercent(size_t current, size_t max);
+bool writeSwapKey(const char* path, const size_t* key, size_t key_size, size_t block_size);
+size_t* readSwapKey(const char* path, size_t* key_size, size_t* block_size);
 
 #endif // IMAGE_HPP

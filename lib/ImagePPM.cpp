@@ -8,6 +8,8 @@
 #include <thread>
 #include <atomic>
 #include <immintrin.h>
+#include <mutex>
+#include <string>
 //#include <functional>
 
 using namespace std;
@@ -340,6 +342,7 @@ void ImagePPM::mosaic(size_t block_size, const char* lib_path, size_t lib_size, 
 
     
     atomic<size_t> processed_blocks(0);
+    mutex mtx;
 
     auto computeMosaicBlock = [&](size_t thread_id, size_t start, size_t end) -> void {
 
@@ -440,6 +443,12 @@ void ImagePPM::mosaic(size_t block_size, const char* lib_path, size_t lib_size, 
         printPercent(processed_blocks, total_block);
     }
 
+    while (processed_blocks < total_block) {
+        mtx.lock();
+        printPercent(processed_blocks, total_block);
+        mtx.unlock();
+    }
+
     for (size_t i = 0; i < total_thread; ++i) {
         threads[i].join();
     }
@@ -488,7 +497,7 @@ size_t* ImagePPM::swap(size_t block_size) {
 
     resize(new_width, new_height);
 
-    octet* new_data = new octet[size()];
+    octet* new_data = new octet[size() * 3];
     size_t* key = new size_t[total_block]();
 
 
@@ -532,7 +541,7 @@ void ImagePPM::sort(size_t block_size, size_t *key) {
     size_t height_factor = _height / block_size;
     size_t total_block = width_factor * height_factor;
 
-    octet* new_data = new octet[size()];
+    octet* new_data = new octet[size() * 3];
 
     for (size_t block_id = 0; block_id < total_block; block_id++) {
         size_t swapped_block_id = key[block_id];

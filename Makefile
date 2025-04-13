@@ -9,23 +9,22 @@ IMG_DIR = img
 PP_DIR = pp_img
 
 
-TARGET = $(BIN_DIR)/main
-MAIN = main.cpp
-
+SOURCES = $(wildcard *.cpp)
+EXECUTABLES = $(patsubst %.cpp, $(BIN_DIR)/%, $(SOURCES))
 
 LIB = $(wildcard $(LIB_DIR)/*.cpp)
 OBJ = $(patsubst $(LIB_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(LIB))
 
 # Compilation
-all: $(TARGET)
+all: $(EXECUTABLES)
 
 # Compilation des objets
 $(OBJ_DIR)/%.o: $(LIB_DIR)/%.cpp $(OBJ_DIR)
 	$(COMPILER) $(FLAGS) -I $(INCLUDE_DIR) -c $< -o $@
 
 # Linking du programme
-$(TARGET): $(OBJ) $(MAIN) $(BIN_DIR) $(IMG_DIR) $(PP_DIR)
-	$(COMPILER) $(FLAGS) $(OBJ) $(MAIN) -o $@
+$(BIN_DIR)/%:%.cpp $(OBJ) $(MAIN) $(BIN_DIR) $(IMG_DIR) $(PP_DIR)
+	$(COMPILER) $(FLAGS) $(OBJ) $< -o $@ 
 
 # Instanciation des dossiers
 $(OBJ_DIR):
@@ -39,7 +38,7 @@ $(PP_DIR):
 
 # Supression des dossiers
 clean:
-	rm -rf $(OBJ_DIR) $(BIN_DIR) $(PP_DIR) $(TARGET)
+	rm -rf $(OBJ_DIR) $(BIN_DIR) $(PP_DIR) $(EXECUTABLES)
 
 # Lancer le programme
 run: clean $(TARGET)
