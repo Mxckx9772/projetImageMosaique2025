@@ -80,9 +80,9 @@ def transform():
     cipher_mode = str(selected_sec_mode)
     imagette_size = str(current_imagette_size.get())
     blocksize = str(current_bloc_size.get())
-    libsize = str(LibSize_entry.get())
+    libsize = "1" if LibSize_entry.get() == "" else LibSize_entry.get()
     sec_mode = str(dropdown_var_sec_mode.get())
-    key_name = keyname_entry.get()
+    key_name = "key" if keyname_entry.get() == "" else keyname_entry.get()
     img_extension = "ppm" if image_path.endswith(".ppm") else "pgm"
     if sec_mode == sec_modes[2]:
         if os.path.exists(image_path):
