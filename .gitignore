@@ -9,10 +9,11 @@ bin/
 img/*
 pgm/*
 ppm/*
+venv/
 *.o
 *.pgm
 *.ppm
-
+*.prvt
 # Cache
 .vscode/
 .idea/

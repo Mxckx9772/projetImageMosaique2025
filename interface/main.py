@@ -96,7 +96,7 @@ def transform():
         if os.path.exists(transformed_image_path):
             if sec_mode == sec_modes[1]:
                 os.system(f"rm {key_name}.prvt")
-                os.system(f"./bin/encrypt {transformed_image_path} {img_extension} {cipher_mode} {key_name} {blocksize}")
+                os.system(f"./bin/encrypt {transformed_image_path} {img_extension} {cipher_mode} {key_name} {imagette_size}")
             show_image_in_new_window(image_path, "Image originale")
             show_image_in_new_window(transformed_image_path, "Image transformée")
         else:

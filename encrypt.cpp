@@ -21,9 +21,12 @@ int main(int argc, char* argv[]) {
     sscanf(argv[3], "%i", &mode);
     string key_path = argv[4];
 
+
     if (argc == 6) {
         sscanf(argv[5], "%lu", &block_size);
     }
+
+    cout << path << " " << type << " " << " " << mode << " " << " " << key_path << " " << block_size; 
 
     if (type == "ppm") {
         ImagePPM img;
@@ -63,37 +66,6 @@ int main(int argc, char* argv[]) {
         }
 
     }
-
-
-
-    /*ImagePPM img;
-    size_t block_size = 128;
-
-    img.read(path.c_str());
-
-    size_t width_factor = img.width() / block_size;
-    size_t height_factor = img.height() / block_size;
-    size_t key_size = width_factor * height_factor;
-
-
-    size_t* key = img.swap(block_size);
-
-    size_t key_size = (img.width() / block_size) * (img.height() / block_size);
-
-
-    writeSwapKey("key.prvt", key, key_size, block_size);
-    cout << block_size << " " << total_block << endl;
-
-    delete key;
-
-    key = readSwapKey("key.prvt", &key_size, &block_size);
-
-    cout << block_size << " " << key_size << endl;
-    img.write("encrypt.ppm", "");
-
-    img.sort(block_size, key);
-
-    img.write("decrypt.ppm", "");*/
 
     return 0;
 }
