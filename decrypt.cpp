@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
 
         if (mode == 0) {
             size_t key_size, block_size;
-            size_t* key = readSwapKey(key_path.c_str(), &key_size, &block_size);
+            size_t* key = readSwapKey((key_path + ".prvt").c_str(), &key_size, &block_size);
 
             img.sort(block_size, key);
 
