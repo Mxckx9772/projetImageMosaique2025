@@ -6,34 +6,23 @@ LIB_DIR = lib
 OBJ_DIR = obj
 BIN_DIR = bin
 IMG_DIR = img
-PP_DIR = pp_img
-
 
 SOURCES = $(wildcard *.cpp)
 EXECUTABLES = $(patsubst %.cpp, $(BIN_DIR)/%, $(SOURCES))
 
-TARGET = $(BIN_DIR)/main
-TARGET_BENCH = $(BIN_DIR)/bench
-MAIN = main.cpp
-BENCH = bench.cpp
-
 LIB = $(wildcard $(LIB_DIR)/*.cpp)
 OBJ = $(patsubst $(LIB_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(LIB))
 
-# Compilation
+# Default target
 all: $(EXECUTABLES)
 
-# Compilation des objets
-$(OBJ_DIR)/%.o: $(LIB_DIR)/%.cpp $(OBJ_DIR)
+# Compilation des objets de la librairie
+$(OBJ_DIR)/%.o: $(LIB_DIR)/%.cpp $(OBJ_DIR) $(INCLUDE_DIR)
 	$(COMPILER) $(FLAGS) -I $(INCLUDE_DIR) -c $< -o $@
 
-# Linking du programme
-$(BIN_DIR)/%:%.cpp $(OBJ) $(MAIN) $(BIN_DIR) $(IMG_DIR) $(PP_DIR)
-	$(COMPILER) $(FLAGS) $(OBJ) $< -o $@ 
-
-# Compilation du bench
-$(TARGET_BENCH): $(OBJ) $(BENCH) | $(BIN_DIR)
-	$(COMPILER) $(FLAGS) $(OBJ) $(BENCH) -o $@
+# Linking du programme principal
+$(BIN_DIR)/%: %.cpp $(OBJ) $(BIN_DIR)
+	$(COMPILER) $(FLAGS) $(OBJ) $< -o $@
 
 # Instanciation des dossiers
 $(OBJ_DIR):
@@ -41,9 +30,6 @@ $(OBJ_DIR):
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
-
-$(PP_DIR):
-	mkdir -p $(PP_DIR)
 
 # Supression des dossiers
 clean:
@@ -55,8 +41,8 @@ run: clean $(TARGET)
 	@echo "Liste des arguments : $(filter-out run,$(MAKECMDGOALS))"
 	./$(TARGET) $(filter-out run,$(MAKECMDGOALS))
 
-bench: clean $(TARGET_BENCH)
+bench: clean bin/bench
 	clear
 	@echo "Execution du benchmark..."
-	./$(TARGET_BENCH) $(filter-out bench,$(MAKECMDGOALS))
+	./bin/bench $(filter-out bench,$(MAKECMDGOALS))
 	@echo "Fin du benchmark"
